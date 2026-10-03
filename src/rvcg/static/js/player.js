@@ -1,5 +1,4 @@
-import { state, dom, fmtHms, setCellSpriteFrame } from "./state.js";
-import { recalcChapters } from "./api.js";
+import { state, dom, setCellSpriteFrame } from "./state.js";
 
 export let player = null;
 
@@ -165,34 +164,6 @@ export function initPlayer(onTimeUpdateChapter, onChaptersChanged) {
     showPlayer(false);
   });
 
-  document.getElementById("split-here-btn")?.addEventListener("click", async () => {
-    const t = Math.round(player.currentTime() * 100) / 100;
-    const idx = state.cuts.findIndex((c) => t > c.start_time + 2 && t < c.end_time - 2);
-    if (idx === -1) return;
-    const next = state.cuts.map((c) => ({
-      start_time: c.start_time,
-      end_time: c.end_time,
-      title: c.title,
-      cut_kind: c.cut_kind,
-      cut_detail: c.cut_detail,
-    }));
-    const origEnd = next[idx].end_time;
-    next[idx].end_time = t;
-    next.splice(idx + 1, 0, {
-      start_time: t,
-      end_time: origEnd,
-      title: `Scene ${String(idx + 2).padStart(2, "0")}`,
-      cut_kind: "manual",
-      cut_detail: `Manual split @ ${fmtHms(t)}`,
-    });
-    const res = await recalcChapters(next);
-    if (res.ok) {
-      state.cuts = res.chapters;
-      refreshSeekbarMarkers();
-      if (onChaptersChanged) onChaptersChanged();
-    }
-  });
-
   window.addEventListener("resize", () => {
     if (dom.playerShell && !dom.playerShell.classList.contains("hidden")) {
       applyPlayerBounds();
@@ -239,7 +210,7 @@ export function initPlayer(onTimeUpdateChapter, onChaptersChanged) {
   }
 
   document.addEventListener("keydown", (e) => {
-    if (dom.exportPopover?.open || dom.settingsPopover?.open || dom.manualExportPopover?.open) return;
+    if (dom.exportPopover?.open || dom.settingsPopover?.open || dom.splitModalPopover?.open) return;
     if (dom.playerShell?.classList.contains("hidden") && !isInPip()) return;
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     if (e.key === "Escape") {

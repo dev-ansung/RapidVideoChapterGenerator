@@ -157,6 +157,11 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
 
+        if route == "/favicon.ico":
+            self.send_response(204)
+            self.end_headers()
+            return
+
         if route.startswith("/static/"):
             rel_part = urllib.parse.unquote(route[len("/static/") :])
             static_root = STATIC_DIR.resolve()

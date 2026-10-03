@@ -93,12 +93,11 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert 'id="settings-popover"' in html
             assert 'id="pref-show-cut-dot"' in html
             assert "cut-dot" in html
-            assert 'id="export-scene-dropdown"' in html
-            assert 'id="manual-export-popover"' in html
-            assert 'id="manual-include-intro"' in html
-            assert 'data-export-mode="chapter"' in html
-            assert 'data-export-mode="nearest"' in html
-            assert 'data-export-mode="manual"' in html
+            assert 'id="split-modal-popover"' in html
+            assert 'id="split-prev-cands"' in html
+            assert 'id="split-next-cands"' in html
+            assert 'data-jump-kind="black"' in html
+            assert 'data-jump-kind="visual"' in html
             assert 'id="reveal-file-btn"' in html
             assert "ph-folder-open" in html
             assert 'value="black-fades"' in html
@@ -110,7 +109,7 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             "player.js",
             "gallery.js",
             "picker.js",
-            "trim-modal.js",
+            "split-modal.js",
             "settings.js",
         ):
             with urllib.request.urlopen(f"{base_url}/static/js/{mod_name}", timeout=5) as js_resp:

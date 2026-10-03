@@ -3,7 +3,7 @@ import { initStatusRevealBtn } from "./api.js";
 import { initPlayer } from "./player.js";
 import { renderGallery, initGalleryControls, highlightActiveCard } from "./gallery.js";
 import { initPicker, loadDirectory, startScan } from "./picker.js";
-import { initTrimModal } from "./trim-modal.js";
+import { initSplitModal } from "./split-modal.js";
 import { initSettingsAndExport } from "./settings.js";
 
 function bootstrapApp() {
@@ -15,7 +15,7 @@ function bootstrapApp() {
   );
   initGalleryControls(() => {});
   initPicker(() => renderGallery());
-  initTrimModal();
+  initSplitModal(() => renderGallery());
   initSettingsAndExport();
 
   loadDirectory(state.currentDir).then(() => {

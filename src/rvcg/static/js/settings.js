@@ -9,6 +9,20 @@ export function syncCutDotPreference() {
   } catch (_) {}
 }
 
+export function syncSettingsInputsFromConfig() {
+  const setMin = document.getElementById("set-cfg-min");
+  const setBlackDur = document.getElementById("set-cfg-black-dur");
+  const setTh = document.getElementById("set-cfg-th");
+  const setMax = document.getElementById("set-cfg-max");
+  const setTarget = document.getElementById("set-cfg-target");
+
+  if (setMin && dom.cfgMin) setMin.value = dom.cfgMin.value;
+  if (setBlackDur && dom.cfgBlackDur) setBlackDur.value = dom.cfgBlackDur.value;
+  if (setTh && dom.cfgTh) setTh.value = dom.cfgTh.value;
+  if (setMax && dom.cfgMax) setMax.value = dom.cfgMax.value;
+  if (setTarget && dom.cfgTarget) setTarget.value = dom.cfgTarget.value;
+}
+
 export function initSettingsAndExport() {
   try {
     if (dom.prefShowCutDot) {
@@ -19,8 +33,33 @@ export function initSettingsAndExport() {
 
   dom.prefShowCutDot?.addEventListener("change", syncCutDotPreference);
 
+  const setMin = document.getElementById("set-cfg-min");
+  const setBlackDur = document.getElementById("set-cfg-black-dur");
+  const setTh = document.getElementById("set-cfg-th");
+  const setMax = document.getElementById("set-cfg-max");
+  const setTarget = document.getElementById("set-cfg-target");
+
+  setMin?.addEventListener("change", () => {
+    if (dom.cfgMin) dom.cfgMin.value = setMin.value;
+  });
+  setBlackDur?.addEventListener("change", () => {
+    if (dom.cfgBlackDur) dom.cfgBlackDur.value = setBlackDur.value;
+  });
+  setTh?.addEventListener("change", () => {
+    if (dom.cfgTh) dom.cfgTh.value = setTh.value;
+  });
+  setMax?.addEventListener("change", () => {
+    if (dom.cfgMax) dom.cfgMax.value = setMax.value;
+  });
+  setTarget?.addEventListener("change", () => {
+    if (dom.cfgTarget) dom.cfgTarget.value = setTarget.value;
+  });
+
   document.querySelectorAll(".open-settings-btn").forEach((btn) => {
-    btn.addEventListener("click", () => dom.settingsPopover?.showModal());
+    btn.addEventListener("click", () => {
+      syncSettingsInputsFromConfig();
+      dom.settingsPopover?.showModal();
+    });
   });
 
   document.getElementById("close-settings")?.addEventListener("click", () => {

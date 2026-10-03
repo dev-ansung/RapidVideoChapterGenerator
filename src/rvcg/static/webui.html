@@ -232,14 +232,7 @@
     </div>
     <div class="flex items-center gap-1 shrink-0">
       <button id="split-here-btn" class="btn btn-primary btn-xs" type="button">✂ Split Scene</button>
-      <div class="relative">
-        <button id="export-scene-btn" class="btn btn-outline btn-xs" type="button">⬇ Export Scene ▾</button>
-        <ul id="export-scene-dropdown" class="menu bg-base-200 border border-base-content/10 rounded-box shadow-xl absolute right-0 top-full mt-1 w-48 z-30 hidden p-1">
-          <li><button type="button" data-export-mode="chapter">Export Entire Chapter</button></li>
-          <li><button type="button" data-export-mode="nearest">Export Nearest Scene</button></li>
-          <li><button type="button" data-export-mode="manual">Export Manually...</button></li>
-        </ul>
-      </div>
+      <button id="export-scene-btn" class="btn btn-outline btn-xs" type="button">⬇ Export Scene</button>
       <button id="close-player-btn" class="btn btn-ghost btn-xs btn-circle" type="button">✕</button>
     </div>
   </div>
@@ -261,109 +254,123 @@
   </div>
 </dialog>
 
-<dialog id="manual-export-popover" class="modal">
+<dialog id="split-modal-popover" class="modal">
   <div class="modal-box max-w-4xl p-4 md:p-6 flex flex-col gap-4">
     <div class="flex items-center justify-between border-b border-base-content/10 pb-3">
-      <h3 class="font-bold text-base">Export Scene Manually — Trim Assistant</h3>
-      <div class="flex items-center gap-3">
-        <span id="manual-playhead-label" class="badge badge-neutral font-mono text-xs"></span>
-        <button id="close-manual-export" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
+      <div class="flex items-center gap-2">
+        <h3 class="font-bold text-base">✂ Split Scene Assistant</h3>
+        <span id="split-target-badge" class="badge badge-primary font-mono text-xs"></span>
+      </div>
+      <button id="close-split-modal" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-base-200/60 rounded-box border border-base-content/10 text-xs">
+      <span class="font-semibold text-base-content/70">Jump to Cut:</span>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="join">
+          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="black" data-jump-dir="prev" data-tippy-content="Jump to closest previous black fade">⏮ Black</button>
+          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="black" data-jump-dir="next" data-tippy-content="Jump to closest next black fade">Black ⏭</button>
+        </div>
+        <div class="join">
+          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="visual" data-jump-dir="prev" data-tippy-content="Jump to closest previous visual cut">⏮ Visual</button>
+          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="visual" data-jump-dir="next" data-tippy-content="Jump to closest next visual cut">Visual ⏭</button>
+        </div>
+        <div class="join">
+          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="chapter" data-jump-dir="prev" data-tippy-content="Jump to closest previous chapter boundary">⏮ Chapter</button>
+          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="chapter" data-jump-dir="next" data-tippy-content="Jump to closest next chapter boundary">Chapter ⏭</button>
+        </div>
       </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box border border-base-content/10">
         <div class="flex items-center justify-between">
-          <span class="font-semibold text-xs">Suggested Start Points</span>
-          <span class="text-[11px] text-base-content/60">Before playhead</span>
+          <span class="font-semibold text-xs">◀ Previous 3 Candidates</span>
+          <span class="text-[11px] text-base-content/60">Before split point</span>
         </div>
-        <div id="manual-start-cands" class="grid grid-cols-3 gap-1.5 min-h-[140px]"></div>
-        <div class="flex gap-2 items-center pt-2 border-t border-base-content/10">
-          <div id="manual-start-thumb" class="relative aspect-video w-28 rounded bg-base-300 overflow-hidden shrink-0 bg-no-repeat"></div>
-          <div class="flex flex-col gap-1.5 flex-1">
-            <div class="flex items-center gap-1.5">
-              <span class="text-xs font-semibold w-9">Start</span>
-              <input id="manual-start-input" class="input input-bordered input-xs flex-1 font-mono" placeholder="00:00:00.000" />
-              <button type="button" id="manual-start-playhead-btn" class="btn btn-outline btn-xs">Use Playhead</button>
-            </div>
-            <div class="flex flex-wrap gap-1">
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="-5">-5s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="-1">-1s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="-0.1">-0.1s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="0.1">+0.1s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="1">+1s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="5">+5s</button>
-            </div>
-          </div>
-        </div>
+        <div id="split-prev-cands" class="grid grid-cols-3 gap-1.5 min-h-[130px]"></div>
       </div>
 
       <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box border border-base-content/10">
         <div class="flex items-center justify-between">
-          <span class="font-semibold text-xs">Suggested End Points</span>
-          <span class="text-[11px] text-base-content/60">After playhead</span>
+          <span class="font-semibold text-xs">Next 3 Candidates ▶</span>
+          <span class="text-[11px] text-base-content/60">After split point</span>
         </div>
-        <div id="manual-end-cands" class="grid grid-cols-3 gap-1.5 min-h-[140px]"></div>
-        <div class="flex gap-2 items-center pt-2 border-t border-base-content/10">
-          <div id="manual-end-thumb" class="relative aspect-video w-28 rounded bg-base-300 overflow-hidden shrink-0 bg-no-repeat"></div>
-          <div class="flex flex-col gap-1.5 flex-1">
-            <div class="flex items-center gap-1.5">
-              <span class="text-xs font-semibold w-9">End</span>
-              <input id="manual-end-input" class="input input-bordered input-xs flex-1 font-mono" placeholder="00:00:00.000" />
-              <button type="button" id="manual-end-playhead-btn" class="btn btn-outline btn-xs">Use Playhead</button>
-            </div>
-            <div class="flex flex-wrap gap-1">
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="-5">-5s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="-1">-1s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="-0.1">-0.1s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="0.1">+0.1s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="1">+1s</button>
-              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="5">+5s</button>
-            </div>
+        <div id="split-next-cands" class="grid grid-cols-3 gap-1.5 min-h-[130px]"></div>
+      </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row items-center gap-4 p-3 bg-base-200 rounded-box border border-base-content/10">
+      <div id="split-thumb" class="relative aspect-video w-36 rounded bg-base-300 overflow-hidden shrink-0 bg-no-repeat border border-base-content/20 shadow-sm"></div>
+      <div class="flex flex-col gap-2 flex-1 w-full">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-semibold">Split Timestamp:</span>
+          <input id="split-time-input" class="input input-bordered input-sm flex-1 font-mono text-xs min-w-[140px]" placeholder="00:00:00.000" />
+          <button type="button" id="split-use-playhead-btn" class="btn btn-outline btn-sm">Use Playhead</button>
+          <button type="button" id="split-preview-btn" class="btn btn-ghost btn-sm">▶ Preview in Player</button>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap gap-1">
+            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="-5">-5s</button>
+            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="-1">-1s</button>
+            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="-0.1">-0.1s</button>
+            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="0.1">+0.1s</button>
+            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="1">+1s</button>
+            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="5">+5s</button>
           </div>
+          <span id="split-segment-info" class="text-xs text-base-content/70 font-mono"></span>
         </div>
       </div>
     </div>
 
-    <div class="flex flex-col gap-3 pt-3 border-t border-base-content/10">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend text-xs">Output File Path</legend>
-          <input id="manual-path-input" class="input input-bordered input-sm w-full font-mono text-xs" spellcheck="false" />
-        </fieldset>
-        <fieldset id="manual-title-field" class="fieldset">
-          <legend class="fieldset-legend text-xs">Intro Title</legend>
-          <input id="manual-title-input" class="input input-bordered input-sm w-full" />
-        </fieldset>
-      </div>
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div class="flex items-center gap-4">
-          <span id="manual-dur-label" class="badge badge-neutral font-mono text-xs"></span>
-          <label class="flex items-center gap-2 text-xs cursor-pointer">
-            <input id="manual-include-intro" type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked />
-            <span>Include 3×3 intro card</span>
-          </label>
-        </div>
-        <div class="flex items-center gap-2">
-          <button id="manual-preview-btn" class="btn btn-outline btn-sm" type="button">▶ Preview Start in Player</button>
-          <button id="run-manual-export-btn" class="btn btn-primary btn-sm" type="button">⬇ Export Trim</button>
-        </div>
+    <div class="flex items-center justify-between pt-2 border-t border-base-content/10">
+      <span class="text-xs text-base-content/60">Selecting a candidate updates split timestamp &amp; sliding context.</span>
+      <div class="flex items-center gap-2">
+        <button id="cancel-split-btn" class="btn btn-ghost btn-sm" type="button">Cancel</button>
+        <button id="confirm-split-btn" class="btn btn-primary btn-sm" type="button">✂ Split Scene Here</button>
       </div>
     </div>
   </div>
 </dialog>
 
 <dialog id="settings-popover" class="modal">
-  <div class="modal-box max-w-md flex flex-col gap-4">
+  <div class="modal-box max-w-lg flex flex-col gap-4">
     <div class="flex items-center justify-between border-b border-base-content/10 pb-3">
-      <h3 class="font-bold text-base">Settings</h3>
+      <h3 class="font-bold text-base">⚙ Detection &amp; Boundary Settings</h3>
       <button id="close-settings" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
     </div>
+
     <div class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-base-200 rounded-box border border-base-content/10">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend text-xs">Min Scene Duration (s)</legend>
+          <input id="set-cfg-min" class="input input-bordered input-sm w-full" type="number" step="10" />
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend text-xs">Black Fade Min (s)</legend>
+          <input id="set-cfg-black-dur" class="input input-bordered input-sm w-full" type="number" step="0.1" min="0.1" max="5.0" />
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend text-xs">Visual Cut Threshold</legend>
+          <input id="set-cfg-th" class="input input-bordered input-sm w-full" type="number" step="0.02" min="0.05" max="0.95" />
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend text-xs">Subdivide Max / Target (s)</legend>
+          <div class="grid grid-cols-2 gap-1.5">
+            <input id="set-cfg-max" class="input input-bordered input-sm w-full" type="number" step="10" placeholder="Max" />
+            <input id="set-cfg-target" class="input input-bordered input-sm w-full" type="number" step="10" placeholder="Target" />
+          </div>
+        </fieldset>
+      </div>
+
       <label class="flex items-center gap-3 text-sm cursor-pointer">
         <input id="pref-show-cut-dot" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
         <span>Show cut origin indicator on scene cards</span>
       </label>
+
       <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box text-xs border border-base-content/10">
         <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content/40"></span><span>Gray — Black fade transition (Stage 1)</span></div>
         <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content"></span><span>White — Visual scene transition (Stage 2)</span></div>
