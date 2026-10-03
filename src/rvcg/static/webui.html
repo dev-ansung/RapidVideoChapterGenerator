@@ -282,6 +282,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: help;
   }
   .scan-log {
     margin-top: 4px;
@@ -425,6 +426,38 @@
     align-items: center;
     gap: 5px;
     flex-shrink: 0;
+  }
+  .cut-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+    cursor: help;
+  }
+  .cut-black {
+    background: #9ca3af;
+    border: 1px solid #6b7280;
+  }
+  .cut-visual {
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+  }
+  .cut-subdiv {
+    background: #38bdf8;
+    border: 1px solid #0284c7;
+  }
+  .cut-start,
+  .cut-embedded {
+    background: #10b981;
+    border: 1px solid #059669;
+  }
+  .cut-manual {
+    background: #f59e0b;
+    border: 1px solid #d97706;
+  }
+  body.hide-cut-dots .cut-dot {
+    display: none;
   }
   .card-badge {
     font-family: Menlo, monospace;
@@ -650,7 +683,8 @@
     z-index: 5;
   }
 
-  #export-popover {
+  #export-popover,
+  #settings-popover {
     border: 1px solid var(--border);
     border-radius: 9px;
     background: var(--panel);
@@ -661,9 +695,50 @@
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
     overflow: hidden;
   }
-  #export-popover::backdrop {
+  #settings-popover {
+    width: min(88vw, 420px);
+  }
+  #export-popover::backdrop,
+  #settings-popover::backdrop {
     background: rgba(0, 0, 0, 0.78);
     backdrop-filter: blur(4px);
+  }
+  .settings-modal-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .pref-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+  .pref-toggle-row input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+  .cut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .cut-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .export-textarea {
     width: 100%;
@@ -711,7 +786,10 @@
   <section class="picker-card">
     <div class="picker-header">
       <span class="picker-title">RapidVideoChapterGenerator</span>
-      <button type="button" id="resume-browser-btn" class="hidden">Return to Scene Browser →</button>
+      <div class="toolbar-right">
+        <button type="button" id="resume-browser-btn" class="hidden">Return to Scene Browser →</button>
+        <button type="button" class="open-settings-btn">⚙ Settings</button>
+      </div>
     </div>
     <div class="path-row">
       <button type="button" id="up-dir-btn">↑ Parent</button>
@@ -824,6 +902,7 @@
       </div>
       <button type="button" class="view-btn active" data-view="grid">Grid</button>
       <button type="button" class="view-btn" data-view="list">List</button>
+      <button type="button" class="open-settings-btn">⚙ Settings</button>
     </div>
   </header>
 
@@ -857,6 +936,28 @@
     </div>
   </div>
   <textarea id="export-textarea" class="export-textarea" readonly></textarea>
+</dialog>
+
+<dialog id="settings-popover">
+  <div class="popover-header">
+    <span class="popover-title">Settings</span>
+    <div class="toolbar-right">
+      <button id="close-settings" type="button">✕</button>
+    </div>
+  </div>
+  <div class="settings-modal-body">
+    <label class="pref-toggle-row">
+      <input id="pref-show-cut-dot" type="checkbox" checked />
+      <span>Show cut origin indicator on scene cards</span>
+    </label>
+    <div class="cut-legend">
+      <div class="cut-legend-row"><span class="cut-dot cut-black"></span><span>Gray — Black fade transition (Stage 1)</span></div>
+      <div class="cut-legend-row"><span class="cut-dot cut-visual"></span><span>White — Visual scene transition (Stage 2)</span></div>
+      <div class="cut-legend-row"><span class="cut-dot cut-subdiv"></span><span>Blue — Long-segment subdivision (Stage 3)</span></div>
+      <div class="cut-legend-row"><span class="cut-dot cut-start"></span><span>Emerald — Video start or embedded chapter</span></div>
+      <div class="cut-legend-row"><span class="cut-dot cut-manual"></span><span>Amber — Manual split</span></div>
+    </div>
+  </div>
 </dialog>
 
 <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
@@ -1196,7 +1297,20 @@ function setPhaseUI(id, pct, info) {
   const infoEl = document.getElementById(`p-info-${id}`);
   if (fill) fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
   if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
-  if (infoEl && info !== undefined) infoEl.textContent = info;
+  if (infoEl && info !== undefined) {
+    infoEl.textContent = info;
+    infoEl.dataset.tippyContent = info;
+    if (infoEl._tippy) {
+      infoEl._tippy.setContent(info);
+    } else if (typeof tippy !== "undefined") {
+      tippy(infoEl, {
+        placement: "top",
+        delay: [60, 0],
+        maxWidth: 460,
+        appendTo: () => document.body,
+      });
+    }
+  }
 }
 
 async function startScan(videoPath, forceRefresh) {
@@ -1272,6 +1386,7 @@ async function startScan(videoPath, forceRefresh) {
       setPhaseUI("spr", pct, msg.info || "rendering...");
     } else if (msg.type === "complete") {
       es.close();
+      setPhaseUI("spr", 100, "sprite sheet ready");
       VIDEO_SRC = `/api/media?path=${encodeURIComponent(msg.video_path)}`;
       SPRITE = msg.sprite;
       CUTS = msg.chapters;
@@ -1420,6 +1535,10 @@ function renderGallery() {
     const hLeft = document.createElement("div");
     hLeft.className = "card-header-left";
 
+    const cutDot = document.createElement("span");
+    cutDot.className = "cut-dot cut-" + (item.cut_kind || "start");
+    cutDot.dataset.tippyContent = item.cut_detail || "";
+
     const badge = document.createElement("span");
     badge.className = "card-badge";
     badge.textContent = "#" + item.id;
@@ -1433,10 +1552,13 @@ function renderGallery() {
         start_time: c.start_time,
         end_time: c.end_time,
         title: idx === index ? titleInput.value : c.title,
+        cut_kind: c.cut_kind,
+        cut_detail: c.cut_detail,
       }));
       syncChaptersEdit(next);
     });
 
+    hLeft.appendChild(cutDot);
     hLeft.appendChild(badge);
     hLeft.appendChild(titleInput);
 
@@ -1455,9 +1577,17 @@ function renderGallery() {
       delBtn.textContent = "×";
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const next = CUTS.map((c) => ({ start_time: c.start_time, end_time: c.end_time, title: c.title }));
+        const next = CUTS.map((c) => ({
+          start_time: c.start_time,
+          end_time: c.end_time,
+          title: c.title,
+          cut_kind: c.cut_kind,
+          cut_detail: c.cut_detail,
+        }));
         if (index === 0) {
           next[1].start_time = next[0].start_time;
+          next[1].cut_kind = next[0].cut_kind;
+          next[1].cut_detail = next[0].cut_detail;
         } else {
           next[index - 1].end_time = next[index].end_time;
         }
@@ -1538,6 +1668,15 @@ function renderGallery() {
     gallery.appendChild(card);
   });
 
+  if (typeof tippy !== "undefined") {
+    tippy(gallery.querySelectorAll(".cut-dot"), {
+      placement: "top",
+      delay: [40, 0],
+      maxWidth: 360,
+      appendTo: () => document.body,
+    });
+  }
+
   const mech = LAST_STATS ? ` (${formatMechanismSummary(LAST_STATS)})` : "";
   countLabel.textContent = `${visibleCount} / ${CUTS.length} chapters${mech}`;
 }
@@ -1590,13 +1729,21 @@ document.getElementById("split-here-btn").addEventListener("click", () => {
   const t = Math.round(player.currentTime() * 100) / 100;
   const idx = CUTS.findIndex((c) => t > c.start_time + 2 && t < c.end_time - 2);
   if (idx === -1) return;
-  const next = CUTS.map((c) => ({ start_time: c.start_time, end_time: c.end_time, title: c.title }));
+  const next = CUTS.map((c) => ({
+    start_time: c.start_time,
+    end_time: c.end_time,
+    title: c.title,
+    cut_kind: c.cut_kind,
+    cut_detail: c.cut_detail,
+  }));
   const origEnd = next[idx].end_time;
   next[idx].end_time = t;
   next.splice(idx + 1, 0, {
     start_time: t,
     end_time: origEnd,
     title: `Scene ${String(idx + 2).padStart(2, "0")}`,
+    cut_kind: "manual",
+    cut_detail: `Manual split @ ${fmtHms(t)}`,
   });
   syncChaptersEdit(next);
 });
@@ -1673,6 +1820,27 @@ document.getElementById("copy-export-btn").addEventListener("click", () => {
   navigator.clipboard.writeText(exportTextarea.value);
 });
 document.getElementById("close-export").addEventListener("click", () => exportPopover.close());
+
+const settingsPopover = document.getElementById("settings-popover");
+const prefShowCutDot = document.getElementById("pref-show-cut-dot");
+
+function syncCutDotPreference() {
+  document.body.classList.toggle("hide-cut-dots", !prefShowCutDot.checked);
+  try {
+    localStorage.setItem("rvcg_show_cut_dot", prefShowCutDot.checked ? "true" : "false");
+  } catch (_) {}
+}
+
+try {
+  prefShowCutDot.checked = localStorage.getItem("rvcg_show_cut_dot") !== "false";
+} catch (_) {}
+syncCutDotPreference();
+
+prefShowCutDot.addEventListener("change", syncCutDotPreference);
+document.querySelectorAll(".open-settings-btn").forEach((btn) => {
+  btn.addEventListener("click", () => settingsPopover.showModal());
+});
+document.getElementById("close-settings").addEventListener("click", () => settingsPopover.close());
 
 document.getElementById("close-player-btn").addEventListener("click", () => {
   showPlayer(false);

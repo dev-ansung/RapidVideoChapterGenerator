@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__VIDEO_TITLE__</title>
 <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy.css" rel="stylesheet" />
 <style>
   :root {
     --bg: #0b0c10;
@@ -121,11 +122,53 @@
     border-bottom: 1px solid var(--border);
     cursor: pointer;
   }
+  .card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+  }
+  .cut-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+    cursor: help;
+  }
+  .cut-black {
+    background: #9ca3af;
+    border: 1px solid #6b7280;
+  }
+  .cut-visual {
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+  }
+  .cut-subdiv {
+    background: #38bdf8;
+    border: 1px solid #0284c7;
+  }
+  .cut-start,
+  .cut-embedded {
+    background: #10b981;
+    border: 1px solid #059669;
+  }
+  .cut-manual {
+    background: #f59e0b;
+    border: 1px solid #d97706;
+  }
+  body.hide-cut-dots .cut-dot {
+    display: none;
+  }
   .card-badge {
     font-family: Menlo, monospace;
     font-size: 10.5px;
     font-weight: 700;
     color: var(--accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .card-title {
     font-size: 11.5px;
@@ -309,6 +352,58 @@
     pointer-events: none;
     z-index: 5;
   }
+  #settings-popover {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--panel);
+    color: var(--text);
+    padding: 0;
+    width: min(88vw, 420px);
+    margin: auto;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+    overflow: hidden;
+  }
+  #settings-popover::backdrop {
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(4px);
+  }
+  .settings-modal-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .pref-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+  .pref-toggle-row input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+  .cut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .cut-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   @media (max-width: 768px) {
     .gallery {
       grid-template-columns: 1fr;
@@ -341,6 +436,7 @@
       <input id="search-input" class="search-input" type="search" placeholder="Search chapter or timestamp..." />
       <button type="button" class="view-btn active" data-view="grid">Grid</button>
       <button type="button" class="view-btn" data-view="list">List</button>
+      <button type="button" class="open-settings-btn">⚙ Settings</button>
     </div>
   </header>
 
@@ -363,8 +459,32 @@
   </div>
 </div>
 
+<dialog id="settings-popover">
+  <div class="popover-header">
+    <span class="popover-title">Settings</span>
+    <div class="toolbar-right">
+      <button id="close-settings" type="button">✕</button>
+    </div>
+  </div>
+  <div class="settings-modal-body">
+    <label class="pref-toggle-row">
+      <input id="pref-show-cut-dot" type="checkbox" checked />
+      <span>Show cut origin indicator on scene cards</span>
+    </label>
+    <div class="cut-legend">
+      <div class="cut-legend-row"><span class="cut-dot cut-black"></span><span>Gray — Black fade transition (Stage 1)</span></div>
+      <div class="cut-legend-row"><span class="cut-dot cut-visual"></span><span>White — Visual scene transition (Stage 2)</span></div>
+      <div class="cut-legend-row"><span class="cut-dot cut-subdiv"></span><span>Blue — Long-segment subdivision (Stage 3)</span></div>
+      <div class="cut-legend-row"><span class="cut-dot cut-start"></span><span>Emerald — Video start or embedded chapter</span></div>
+      <div class="cut-legend-row"><span class="cut-dot cut-manual"></span><span>Amber — Manual split</span></div>
+    </div>
+  </div>
+</dialog>
+
 <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy-bundle.umd.min.js"></script>
 <script>
 const VIDEO_SRC = __VIDEO_SRC__;
 const SPRITE = __SPRITE__;
@@ -661,10 +781,27 @@ function renderGallery() {
     const header = document.createElement("div");
     header.className = "card-header";
     header.addEventListener("click", () => openAt(index, item.start_time));
-    header.innerHTML = `
-      <span class="card-badge">#${item.id} · ${item.title}</span>
-      <span class="card-meta">${item.source_range} · ${item.duration_str}</span>
-    `;
+
+    const hLeft = document.createElement("div");
+    hLeft.className = "card-header-left";
+
+    const cutDot = document.createElement("span");
+    cutDot.className = "cut-dot cut-" + (item.cut_kind || "start");
+    cutDot.dataset.tippyContent = item.cut_detail || "";
+
+    const badge = document.createElement("span");
+    badge.className = "card-badge";
+    badge.textContent = `#${item.id} · ${item.title}`;
+
+    hLeft.appendChild(cutDot);
+    hLeft.appendChild(badge);
+
+    const metaSpan = document.createElement("span");
+    metaSpan.className = "card-meta";
+    metaSpan.textContent = `${item.source_range} · ${item.duration_str}`;
+
+    header.appendChild(hLeft);
+    header.appendChild(metaSpan);
 
     const grid = document.createElement("div");
     grid.className = "contact-grid";
@@ -734,8 +871,38 @@ function renderGallery() {
     gallery.appendChild(card);
   });
 
+  if (typeof tippy !== "undefined") {
+    tippy(gallery.querySelectorAll(".cut-dot"), {
+      placement: "top",
+      delay: [40, 0],
+      maxWidth: 360,
+      appendTo: () => document.body,
+    });
+  }
+
   countLabel.textContent = `${visibleCount} / ${CUTS.length} chapters`;
 }
+
+const settingsPopover = document.getElementById("settings-popover");
+const prefShowCutDot = document.getElementById("pref-show-cut-dot");
+
+function syncCutDotPreference() {
+  document.body.classList.toggle("hide-cut-dots", !prefShowCutDot.checked);
+  try {
+    localStorage.setItem("rvcg_show_cut_dot", prefShowCutDot.checked ? "true" : "false");
+  } catch (_) {}
+}
+
+try {
+  prefShowCutDot.checked = localStorage.getItem("rvcg_show_cut_dot") !== "false";
+} catch (_) {}
+syncCutDotPreference();
+
+prefShowCutDot.addEventListener("change", syncCutDotPreference);
+document.querySelectorAll(".open-settings-btn").forEach((btn) => {
+  btn.addEventListener("click", () => settingsPopover.showModal());
+});
+document.getElementById("close-settings").addEventListener("click", () => settingsPopover.close());
 
 searchInput.addEventListener("input", (e) => {
   searchQuery = e.target.value.trim();

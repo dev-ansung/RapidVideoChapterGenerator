@@ -83,6 +83,9 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             assert 'id="stat-visual"' in html
             assert 'id="stat-sub"' in html
             assert 'id="scan-log"' in html
+            assert 'id="settings-popover"' in html
+            assert 'id="pref-show-cut-dot"' in html
+            assert "cut-dot" in html
             assert 'value="black-fades"' in html
             assert "function isInPip()" in html
             assert "if (!isInPip())" in html
@@ -111,14 +114,29 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             f"{base_url}/api/chapters/recalc",
             {
                 "chapters": [
-                    {"start_time": 0.0, "end_time": 2.0, "title": "Opening"},
-                    {"start_time": 2.0, "end_time": 4.0, "title": "Finale"},
+                    {
+                        "start_time": 0.0,
+                        "end_time": 2.0,
+                        "title": "Opening",
+                        "cut_kind": "start",
+                        "cut_detail": "Video start",
+                    },
+                    {
+                        "start_time": 2.0,
+                        "end_time": 4.0,
+                        "title": "Finale",
+                        "cut_kind": "black",
+                        "cut_detail": "Stage 1: Black fade",
+                    },
                 ]
             },
         )
         recalc_list = recalc.get("chapters")
         assert isinstance(recalc_list, list)
         assert len(recalc_list) == 2
+        assert isinstance(recalc_list[1], dict)
+        assert recalc_list[1].get("cut_kind") == "black"
+        assert recalc_list[1].get("cut_detail") == "Stage 1: Black fade"
 
         saved = _post_json(
             f"{base_url}/api/chapters/save",

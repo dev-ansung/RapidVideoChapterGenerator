@@ -97,12 +97,16 @@ def test_solve_boundaries_stage_toggles() -> None:
         black_points=[300.0, 350.0],
         visual_cuts=[VisualCut(timestamp=600.0, score=0.92), VisualCut(timestamp=1050.0, score=0.61)],
     )
-    segs, stats = solve_boundaries_with_stats(1500.0, full_raw, BoundaryConfig())
-    assert len(segs) == 4
+    segs, stats = solve_boundaries_with_stats(1700.0, full_raw, BoundaryConfig())
+    assert len(segs) == 5
+    assert [s.cut_kind for s in segs] == ["start", "black", "visual", "visual", "subdiv"]
+    assert "Black fade" in segs[1].cut_detail
+    assert "Visual cut" in segs[2].cut_detail
+    assert "Subdivided" in segs[4].cut_detail
     assert stats.raw_black == 2
     assert stats.used_black == 1
     assert stats.raw_visual == 2
     assert stats.used_visual == 2
-    assert stats.sub_cuts == 0
+    assert stats.sub_cuts == 1
     assert any("Black fade" in line for line in stats.logs)
     assert any("Visual cut" in line for line in stats.logs)

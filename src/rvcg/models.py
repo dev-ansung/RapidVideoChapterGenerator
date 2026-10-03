@@ -90,6 +90,8 @@ class SceneSegment:
     title: str
     cell_times: list[float]
     card_dur: float = 8.4
+    cut_kind: str = "start"
+    cut_detail: str = "Video start (00:00:00)"
 
     @property
     def id_str(self) -> str:
@@ -124,6 +126,8 @@ class SceneSegment:
             "card_dur": self.card_dur,
             "cell_times": self.cell_times,
             "cell_labels": self.cell_labels,
+            "cut_kind": self.cut_kind,
+            "cut_detail": self.cut_detail,
         }
 
 

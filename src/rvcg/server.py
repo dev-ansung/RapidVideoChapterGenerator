@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from rvcg.models import BoundaryConfig, BoundaryStats, SceneSegment, SpriteMeta
+from rvcg.models import BoundaryConfig, BoundaryStats, SceneSegment, SpriteMeta, fmt_hms
 from rvcg.muxer import embed_chapters_atomic, export_scene_cut, format_chapters_export
 from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters, safe_float
 from rvcg.scanner import scan_keyframes
@@ -72,6 +72,10 @@ def parse_chapters_payload(raw_list: list[dict[str, str | int | float]], card_du
         e = safe_float(item.get("end_time")) or (s + 1.0)
         raw_title = str(item.get("title", f"Scene {idx:02d}")).strip()
         title = unicodedata.normalize("NFC", raw_title) if raw_title else f"Scene {idx:02d}"
+        default_kind = "start" if idx == 1 else "manual"
+        default_detail = f"Video start ({fmt_hms(s)})" if idx == 1 else f"Manual cut @ {fmt_hms(s)}"
+        cut_kind = str(item.get("cut_kind", default_kind)).strip() or default_kind
+        cut_detail = str(item.get("cut_detail", default_detail)).strip() or default_detail
         segments.append(
             SceneSegment(
                 index=idx,
@@ -80,6 +84,8 @@ def parse_chapters_payload(raw_list: list[dict[str, str | int | float]], card_du
                 title=title,
                 cell_times=compute_cell_times(s, e, card_dur),
                 card_dur=card_dur,
+                cut_kind=cut_kind,
+                cut_detail=cut_detail,
             )
         )
     return segments

@@ -32,8 +32,11 @@ def place_priority_anchors(
     enable_black_fades: bool = True,
     enable_visual_cuts: bool = True,
     logs: list[str] | None = None,
+    cut_origins: dict[float, tuple[str, str]] | None = None,
 ) -> tuple[list[float], int, int]:
     anchors = [0.0, duration]
+    if cut_origins is not None:
+        cut_origins[0.0] = ("start", "Video start (00:00:00)")
     n_black_used = 0
     if enable_black_fades:
         for bp in sorted(raw.black_points):
@@ -41,6 +44,8 @@ def place_priority_anchors(
                 anchors.append(bp)
                 anchors.sort()
                 n_black_used += 1
+                if cut_origins is not None:
+                    cut_origins[round(bp, 2)] = ("black", f"Stage 1: Black fade @ {fmt_hms(bp)} ({bp:.2f}s)")
                 if logs is not None:
                     logs.append(f"[Stage 1] Black fade @ {fmt_hms(bp)} ({bp:.2f}s) -> KEPT")
             elif logs is not None:
@@ -59,6 +64,11 @@ def place_priority_anchors(
                 anchors.append(vc.timestamp)
                 anchors.sort()
                 n_visual_used += 1
+                if cut_origins is not None:
+                    cut_origins[round(vc.timestamp, 2)] = (
+                        "visual",
+                        f"Stage 2: Visual cut @ {fmt_hms(vc.timestamp)} (score={vc.score:.3f})",
+                    )
                 if logs is not None:
                     logs.append(
                         f"[Stage 2] Visual cut @ {fmt_hms(vc.timestamp)} ({vc.timestamp:.2f}s, score={vc.score:.3f}) -> KEPT"
@@ -82,6 +92,7 @@ def subdivide_long_gaps(
     max_seg: float,
     target_seg: float,
     logs: list[str] | None = None,
+    cut_origins: dict[float, tuple[str, str]] | None = None,
 ) -> tuple[list[float], int, int]:
     final_cuts = [anchors[0]]
     n_sub_cuts = 0
@@ -98,24 +109,33 @@ def subdivide_long_gaps(
             for _ in range(1, n_sub):
                 target_t = final_cuts[-1] + step
                 best_sc = [
-                    vc.timestamp
+                    vc
                     for vc in visual_cuts
                     if abs(vc.timestamp - target_t) <= 45.0
                     and (vc.timestamp - final_cuts[-1]) >= min_seg * 0.75
                     and (nxt - vc.timestamp) >= min_seg * 0.75
                 ]
                 if best_sc:
-                    cut_t = min(best_sc, key=lambda x: abs(x - target_t))
+                    chosen_vc = min(best_sc, key=lambda x: abs(x.timestamp - target_t))
+                    cut_t = chosen_vc.timestamp
                     n_snapped += 1
+                    detail = (
+                        f"Stage 3: Subdivided long gap @ {fmt_hms(cut_t)} "
+                        f"(snapped to visual cut score={chosen_vc.score:.3f}, target {fmt_hms(target_t)})"
+                    )
                     if logs is not None:
                         logs.append(
                             f"[Stage 3]   Sub-cut @ {fmt_hms(cut_t)} ({cut_t:.2f}s, snapped from target {fmt_hms(target_t)})"
                         )
                 else:
                     cut_t = target_t
+                    detail = f"Stage 3: Subdivided long gap @ {fmt_hms(cut_t)} (uniform step)"
                     if logs is not None:
                         logs.append(f"[Stage 3]   Sub-cut @ {fmt_hms(cut_t)} ({cut_t:.2f}s, uniform step)")
-                final_cuts.append(round(cut_t, 2))
+                rounded_t = round(cut_t, 2)
+                if cut_origins is not None:
+                    cut_origins[rounded_t] = ("subdiv", detail)
+                final_cuts.append(rounded_t)
                 n_sub_cuts += 1
         final_cuts.append(round(nxt, 2))
     return final_cuts, n_sub_cuts, n_snapped
@@ -126,6 +146,7 @@ def merge_and_sample(
     card_dur: float = 8.4,
     min_tail: float = 20.0,
     title_template: str = "Scene {n:02d}",
+    cut_origins: dict[float, tuple[str, str]] | None = None,
 ) -> list[SceneSegment]:
     raw_pairs: list[tuple[float, float]] = []
     for idx in range(len(cuts) - 1):
@@ -138,14 +159,22 @@ def merge_and_sample(
 
     segments: list[SceneSegment] = []
     for idx, (s, e) in enumerate(raw_pairs, 1):
+        rs = round(s, 2)
+        kind, detail = (
+            cut_origins.get(rs, ("start" if rs == 0.0 else "visual", f"Cut @ {fmt_hms(rs)}"))
+            if cut_origins is not None
+            else ("start" if rs == 0.0 else "visual", f"Cut @ {fmt_hms(rs)}")
+        )
         segments.append(
             SceneSegment(
                 index=idx,
-                start_time=round(s, 2),
+                start_time=rs,
                 end_time=round(e, 2),
                 title=format_chapter_title(title_template, idx),
                 cell_times=compute_cell_times(s, e, card_dur),
                 card_dur=card_dur,
+                cut_kind=kind,
+                cut_detail=detail,
             )
         )
     return segments
@@ -163,6 +192,8 @@ def segments_from_tuples(
             title=title,
             cell_times=compute_cell_times(s, e, card_dur),
             card_dur=card_dur,
+            cut_kind="start" if idx == 1 else "embedded",
+            cut_detail="Video start (00:00:00)" if idx == 1 else f"Embedded chapter @ {fmt_hms(s)}",
         )
         for idx, (s, e, title) in enumerate(raw_tuples, 1)
     ]
@@ -181,6 +212,7 @@ def solve_boundaries_with_stats(
     logs: list[str] = [
         f"[Scan] Raw candidates: {len(raw.black_points)} black fades, {len(raw.visual_cuts)} visual cuts (duration={fmt_hms(duration)})"
     ]
+    cut_origins: dict[float, tuple[str, str]] = {0.0: ("start", "Video start (00:00:00)")}
 
     emit(3, 0.0, 1.0, "placing anchors...")
     anchors, n_black, n_visual = place_priority_anchors(
@@ -190,6 +222,7 @@ def solve_boundaries_with_stats(
         enable_black_fades=config.enable_black_fades,
         enable_visual_cuts=config.enable_visual_cuts,
         logs=logs,
+        cut_origins=cut_origins,
     )
     emit(3, 1.0, 1.0, f"{len(anchors)} anchors ({n_black} black, {n_visual} visual)")
 
@@ -204,6 +237,7 @@ def solve_boundaries_with_stats(
             max_seg=config.max_seg,
             target_seg=config.target_seg,
             logs=logs,
+            cut_origins=cut_origins,
         )
         emit(4, 1.0, 1.0, f"+{n_sub} sub-cuts ({n_snapped} snapped to visual cuts)")
     else:
@@ -216,9 +250,10 @@ def solve_boundaries_with_stats(
         cuts=cuts,
         card_dur=config.card_dur,
         title_template=config.title_template,
+        cut_origins=cut_origins,
     )
     for seg in segments:
-        logs.append(f"[Result] #{seg.id_str} {seg.title}: {seg.source_range} ({seg.duration_str})")
+        logs.append(f"[Result] #{seg.id_str} {seg.title}: {seg.source_range} ({seg.duration_str}) [{seg.cut_kind}]")
     emit(5, 1.0, 1.0, f"{len(segments)} chapters · {len(segments) * 9} grid cells")
 
     stats = BoundaryStats(
