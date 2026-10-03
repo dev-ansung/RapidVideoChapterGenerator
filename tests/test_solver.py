@@ -3,6 +3,7 @@ from rvcg.solver import (
     merge_and_sample,
     place_priority_anchors,
     solve_boundaries,
+    solve_boundaries_with_stats,
     subdivide_long_gaps,
 )
 
@@ -91,3 +92,17 @@ def test_solve_boundaries_stage_toggles() -> None:
     )
     segs_visual_only = solve_boundaries(1500.0, raw, visual_only_cfg)
     assert [(s.start_time, s.end_time) for s in segs_visual_only] == [(0.0, 600.0), (600.0, 1500.0)]
+
+    full_raw = RawScanResult(
+        black_points=[300.0, 350.0],
+        visual_cuts=[VisualCut(timestamp=600.0, score=0.92), VisualCut(timestamp=1050.0, score=0.61)],
+    )
+    segs, stats = solve_boundaries_with_stats(1500.0, full_raw, BoundaryConfig())
+    assert len(segs) == 4
+    assert stats.raw_black == 2
+    assert stats.used_black == 1
+    assert stats.raw_visual == 2
+    assert stats.used_visual == 2
+    assert stats.sub_cuts == 0
+    assert any("Black fade" in line for line in stats.logs)
+    assert any("Visual cut" in line for line in stats.logs)

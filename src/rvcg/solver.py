@@ -2,10 +2,12 @@ import math
 
 from rvcg.models import (
     BoundaryConfig,
+    BoundaryStats,
     PhaseProgressCallback,
     RawScanResult,
     SceneSegment,
     VisualCut,
+    fmt_hms,
 )
 
 
@@ -29,6 +31,7 @@ def place_priority_anchors(
     min_seg: float,
     enable_black_fades: bool = True,
     enable_visual_cuts: bool = True,
+    logs: list[str] | None = None,
 ) -> tuple[list[float], int, int]:
     anchors = [0.0, duration]
     n_black_used = 0
@@ -38,6 +41,16 @@ def place_priority_anchors(
                 anchors.append(bp)
                 anchors.sort()
                 n_black_used += 1
+                if logs is not None:
+                    logs.append(f"[Stage 1] Black fade @ {fmt_hms(bp)} ({bp:.2f}s) -> KEPT")
+            elif logs is not None:
+                nearest = min(anchors, key=lambda a: abs(bp - a))
+                logs.append(
+                    f"[Stage 1] Black fade @ {fmt_hms(bp)} ({bp:.2f}s) -> SUPPRESSED "
+                    f"({abs(bp - nearest):.1f}s from {fmt_hms(nearest)} < min {min_seg:.0f}s)"
+                )
+    elif logs is not None:
+        logs.append("[Stage 1] Black Fades disabled")
 
     n_visual_used = 0
     if enable_visual_cuts:
@@ -46,6 +59,18 @@ def place_priority_anchors(
                 anchors.append(vc.timestamp)
                 anchors.sort()
                 n_visual_used += 1
+                if logs is not None:
+                    logs.append(
+                        f"[Stage 2] Visual cut @ {fmt_hms(vc.timestamp)} ({vc.timestamp:.2f}s, score={vc.score:.3f}) -> KEPT"
+                    )
+            elif logs is not None:
+                nearest = min(anchors, key=lambda a: abs(vc.timestamp - a))
+                logs.append(
+                    f"[Stage 2] Visual cut @ {fmt_hms(vc.timestamp)} ({vc.timestamp:.2f}s, score={vc.score:.3f}) -> SUPPRESSED "
+                    f"({abs(vc.timestamp - nearest):.1f}s from {fmt_hms(nearest)} < min {min_seg:.0f}s)"
+                )
+    elif logs is not None:
+        logs.append("[Stage 2] Visual Cuts disabled")
 
     return anchors, n_black_used, n_visual_used
 
@@ -56,6 +81,7 @@ def subdivide_long_gaps(
     min_seg: float,
     max_seg: float,
     target_seg: float,
+    logs: list[str] | None = None,
 ) -> tuple[list[float], int, int]:
     final_cuts = [anchors[0]]
     n_sub_cuts = 0
@@ -65,6 +91,10 @@ def subdivide_long_gaps(
         if gap > max_seg:
             n_sub = int(math.ceil(gap / target_seg))
             step = gap / n_sub
+            if logs is not None:
+                logs.append(
+                    f"[Stage 3] Gap {fmt_hms(final_cuts[-1])}–{fmt_hms(nxt)} ({gap:.1f}s > max {max_seg:.0f}s) -> splitting into {n_sub} parts"
+                )
             for _ in range(1, n_sub):
                 target_t = final_cuts[-1] + step
                 best_sc = [
@@ -77,8 +107,14 @@ def subdivide_long_gaps(
                 if best_sc:
                     cut_t = min(best_sc, key=lambda x: abs(x - target_t))
                     n_snapped += 1
+                    if logs is not None:
+                        logs.append(
+                            f"[Stage 3]   Sub-cut @ {fmt_hms(cut_t)} ({cut_t:.2f}s, snapped from target {fmt_hms(target_t)})"
+                        )
                 else:
                     cut_t = target_t
+                    if logs is not None:
+                        logs.append(f"[Stage 3]   Sub-cut @ {fmt_hms(cut_t)} ({cut_t:.2f}s, uniform step)")
                 final_cuts.append(round(cut_t, 2))
                 n_sub_cuts += 1
         final_cuts.append(round(nxt, 2))
@@ -132,15 +168,19 @@ def segments_from_tuples(
     ]
 
 
-def solve_boundaries(
+def solve_boundaries_with_stats(
     duration: float,
     raw: RawScanResult,
     config: BoundaryConfig,
     on_phase: PhaseProgressCallback | None = None,
-) -> list[SceneSegment]:
+) -> tuple[list[SceneSegment], BoundaryStats]:
     def emit(phase: int, completed: float, total: float, info: str) -> None:
         if on_phase is not None:
             on_phase(phase, completed, total, info)
+
+    logs: list[str] = [
+        f"[Scan] Raw candidates: {len(raw.black_points)} black fades, {len(raw.visual_cuts)} visual cuts (duration={fmt_hms(duration)})"
+    ]
 
     emit(3, 0.0, 1.0, "placing anchors...")
     anchors, n_black, n_visual = place_priority_anchors(
@@ -149,10 +189,13 @@ def solve_boundaries(
         config.min_seg,
         enable_black_fades=config.enable_black_fades,
         enable_visual_cuts=config.enable_visual_cuts,
+        logs=logs,
     )
     emit(3, 1.0, 1.0, f"{len(anchors)} anchors ({n_black} black, {n_visual} visual)")
 
     emit(4, 0.0, 1.0, "checking gaps...")
+    n_sub = 0
+    n_snapped = 0
     if config.enable_subdivide:
         cuts, n_sub, n_snapped = subdivide_long_gaps(
             anchors=anchors,
@@ -160,10 +203,12 @@ def solve_boundaries(
             min_seg=config.min_seg,
             max_seg=config.max_seg,
             target_seg=config.target_seg,
+            logs=logs,
         )
         emit(4, 1.0, 1.0, f"+{n_sub} sub-cuts ({n_snapped} snapped to visual cuts)")
     else:
         cuts = [round(a, 2) for a in anchors]
+        logs.append("[Stage 3] Subdivide Long disabled")
         emit(4, 1.0, 1.0, "skipped (subdivide off)")
 
     emit(5, 0.0, 1.0, "merging & sampling...")
@@ -172,5 +217,27 @@ def solve_boundaries(
         card_dur=config.card_dur,
         title_template=config.title_template,
     )
+    for seg in segments:
+        logs.append(f"[Result] #{seg.id_str} {seg.title}: {seg.source_range} ({seg.duration_str})")
     emit(5, 1.0, 1.0, f"{len(segments)} chapters · {len(segments) * 9} grid cells")
+
+    stats = BoundaryStats(
+        raw_black=len(raw.black_points),
+        used_black=n_black,
+        raw_visual=len(raw.visual_cuts),
+        used_visual=n_visual,
+        sub_cuts=n_sub,
+        snapped_cuts=n_snapped,
+        logs=logs,
+    )
+    return segments, stats
+
+
+def solve_boundaries(
+    duration: float,
+    raw: RawScanResult,
+    config: BoundaryConfig,
+    on_phase: PhaseProgressCallback | None = None,
+) -> list[SceneSegment]:
+    segments, _ = solve_boundaries_with_stats(duration, raw, config, on_phase)
     return segments

@@ -79,6 +79,10 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             assert 'id="cfg-black-dur"' in html
             assert 'id="cfg-enable-visual"' in html
             assert 'id="cfg-enable-sub"' in html
+            assert 'id="stat-black"' in html
+            assert 'id="stat-visual"' in html
+            assert 'id="stat-sub"' in html
+            assert 'id="scan-log"' in html
             assert 'value="black-fades"' in html
             assert "function isInPip()" in html
             assert "if (!isInPip())" in html
@@ -186,7 +190,12 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
                     events.append(ev)
                     if ev.get("type") in {"complete", "error"}:
                         break
-        assert any(e.get("type") == "complete" for e in events)
+        complete_evs = [e for e in events if e.get("type") == "complete"]
+        assert len(complete_evs) == 1
+        stats_obj = complete_evs[0].get("stats")
+        assert isinstance(stats_obj, dict)
+        assert "used_black" in stats_obj
+        assert isinstance(complete_evs[0].get("logs"), list)
     finally:
         server.shutdown()
         server.server_close()

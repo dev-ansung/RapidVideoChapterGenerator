@@ -135,6 +135,12 @@
   .stage-card.disabled {
     opacity: 0.48;
   }
+  .stage-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
   .stage-toggle {
     display: flex;
     align-items: center;
@@ -143,6 +149,12 @@
     font-weight: 600;
     color: var(--text);
     cursor: pointer;
+  }
+  .stage-stat {
+    font-size: 11px;
+    font-family: Menlo, Monaco, monospace;
+    color: #38bdf8;
+    font-variant-numeric: tabular-nums;
   }
   .stage-fields {
     display: flex;
@@ -219,10 +231,31 @@
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 12px 14px;
+    padding: 10px 14px;
+  }
+  .progress-summary-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    user-select: none;
+  }
+  .progress-summary-meta {
+    font-size: 11.5px;
+    font-family: Menlo, Monaco, monospace;
+    color: #38bdf8;
+    font-weight: 500;
+  }
+  .progress-body {
     display: flex;
     flex-direction: column;
     gap: 7px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
   }
   .phase-row {
     display: grid;
@@ -249,6 +282,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .scan-log {
+    margin-top: 4px;
+    width: 100%;
+    height: 150px;
+    background: var(--bg);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: Menlo, Monaco, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    resize: vertical;
+    outline: none;
   }
 
   #browser-view {
@@ -691,9 +739,12 @@
       </div>
       <div class="pipeline-grid">
         <div id="stage-black" class="stage-card" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black transitions.">
-          <label class="stage-toggle">
-            <input id="cfg-enable-black" type="checkbox" checked /> 1. Black Fades
-          </label>
+          <div class="stage-head">
+            <label class="stage-toggle">
+              <input id="cfg-enable-black" type="checkbox" checked /> 1. Black Fades
+            </label>
+            <span id="stat-black" class="stage-stat"></span>
+          </div>
           <div class="stage-fields">
             <label class="field-group" data-tippy-content="Minimum fade-to-black duration in seconds required to register a black-fade cut.">Min Fade (s)
               <input id="cfg-black-dur" class="text-input" type="number" step="0.1" min="0.1" max="5.0" />
@@ -701,9 +752,12 @@
           </div>
         </div>
         <div id="stage-visual" class="stage-card" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
-          <label class="stage-toggle">
-            <input id="cfg-enable-visual" type="checkbox" checked /> 2. Visual Cuts
-          </label>
+          <div class="stage-head">
+            <label class="stage-toggle">
+              <input id="cfg-enable-visual" type="checkbox" checked /> 2. Visual Cuts
+            </label>
+            <span id="stat-visual" class="stage-stat"></span>
+          </div>
           <div class="stage-fields">
             <label class="field-group" data-tippy-content="Visual cut sensitivity (0.05–0.95). Lower values detect subtler changes; higher values require sharper transitions.">Threshold
               <input id="cfg-th" class="text-input" type="number" step="0.02" min="0.05" max="0.95" />
@@ -711,9 +765,12 @@
           </div>
         </div>
         <div id="stage-subdivide" class="stage-card" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
-          <label class="stage-toggle">
-            <input id="cfg-enable-sub" type="checkbox" checked /> 3. Subdivide Long
-          </label>
+          <div class="stage-head">
+            <label class="stage-toggle">
+              <input id="cfg-enable-sub" type="checkbox" checked /> 3. Subdivide Long
+            </label>
+            <span id="stat-sub" class="stage-stat"></span>
+          </div>
           <div class="stage-fields">
             <label class="field-group" data-tippy-content="Maximum chapter duration in seconds before automatic subdivision is triggered.">Max (s)
               <input id="cfg-max" class="text-input" type="number" step="10" />
@@ -727,14 +784,21 @@
     </div>
   </section>
 
-  <section id="progress-box" class="progress-box hidden">
-    <div class="phase-row"><span>[1/5] Embedded chapter check</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-1"></div></div><span id="p-pct-1">0%</span><span class="phase-info" id="p-info-1">waiting...</span></div>
-    <div class="phase-row"><span>[2/5] Keyframe visual scan</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-2"></div></div><span id="p-pct-2">0%</span><span class="phase-info" id="p-info-2">waiting...</span></div>
-    <div class="phase-row"><span>[3/5] Priority anchor placement</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-3"></div></div><span id="p-pct-3">0%</span><span class="phase-info" id="p-info-3">waiting...</span></div>
-    <div class="phase-row"><span>[4/5] Long-segment subdivision</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-4"></div></div><span id="p-pct-4">0%</span><span class="phase-info" id="p-info-4">waiting...</span></div>
-    <div class="phase-row"><span>[5/5] Tail merge & cell sampling</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-5"></div></div><span id="p-pct-5">0%</span><span class="phase-info" id="p-info-5">waiting...</span></div>
-    <div class="phase-row"><span>      Timeline sprite sheet</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-spr"></div></div><span id="p-pct-spr">0%</span><span class="phase-info" id="p-info-spr">rendering...</span></div>
-  </section>
+  <details id="progress-box" class="progress-box hidden" open>
+    <summary class="progress-summary-bar">
+      <span id="progress-title">Scan Diagnostics</span>
+      <span id="progress-summary" class="progress-summary-meta"></span>
+    </summary>
+    <div class="progress-body">
+      <div class="phase-row"><span>[1/5] Embedded chapter check</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-1"></div></div><span id="p-pct-1">0%</span><span class="phase-info" id="p-info-1">waiting...</span></div>
+      <div class="phase-row"><span>[2/5] Keyframe visual scan</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-2"></div></div><span id="p-pct-2">0%</span><span class="phase-info" id="p-info-2">waiting...</span></div>
+      <div class="phase-row"><span>[3/5] Priority anchor placement</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-3"></div></div><span id="p-pct-3">0%</span><span class="phase-info" id="p-info-3">waiting...</span></div>
+      <div class="phase-row"><span>[4/5] Long-segment subdivision</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-4"></div></div><span id="p-pct-4">0%</span><span class="phase-info" id="p-info-4">waiting...</span></div>
+      <div class="phase-row"><span>[5/5] Tail merge & cell sampling</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-5"></div></div><span id="p-pct-5">0%</span><span class="phase-info" id="p-info-5">waiting...</span></div>
+      <div class="phase-row"><span>      Timeline sprite sheet</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-spr"></div></div><span id="p-pct-spr">0%</span><span class="phase-info" id="p-info-spr">rendering...</span></div>
+      <textarea id="scan-log" class="scan-log" readonly spellcheck="false" placeholder="Scan diagnostic log..."></textarea>
+    </div>
+  </details>
 </main>
 
 <main id="browser-view" class="hidden">
@@ -1107,6 +1171,25 @@ async function loadDirectory(dirPath) {
   }
 }
 
+let LAST_STATS = null;
+const statBlackEl = document.getElementById("stat-black");
+const statVisualEl = document.getElementById("stat-visual");
+const statSubEl = document.getElementById("stat-sub");
+const progressTitleEl = document.getElementById("progress-title");
+const progressSummaryEl = document.getElementById("progress-summary");
+const scanLogEl = document.getElementById("scan-log");
+
+function appendScanLog(line) {
+  if (!scanLogEl) return;
+  scanLogEl.value += (scanLogEl.value ? "\n" : "") + line;
+  scanLogEl.scrollTop = scanLogEl.scrollHeight;
+}
+
+function formatMechanismSummary(stats) {
+  if (!stats) return "";
+  return `${stats.used_black} black · ${stats.used_visual} visual · +${stats.sub_cuts} subdiv`;
+}
+
 function setPhaseUI(id, pct, info) {
   const fill = document.getElementById(`p-fill-${id}`);
   const pctEl = document.getElementById(`p-pct-${id}`);
@@ -1119,6 +1202,7 @@ function setPhaseUI(id, pct, info) {
 async function startScan(videoPath, forceRefresh) {
   currentVideoPath = videoPath;
   const slashIdx = videoPath.lastIndexOf("/");
+  const baseName = slashIdx >= 0 ? videoPath.slice(slashIdx + 1) : videoPath;
   if (slashIdx > 0) {
     const parentDir = videoPath.slice(0, slashIdx);
     if (parentDir !== currentDir || dirInput.value.trim() !== parentDir) {
@@ -1144,6 +1228,14 @@ async function startScan(videoPath, forceRefresh) {
     workers: Number(document.getElementById("cfg-workers").value || 8),
   };
 
+  LAST_STATS = null;
+  progressTitleEl.textContent = `Scanning: ${baseName}`;
+  progressSummaryEl.textContent = "in progress...";
+  statBlackEl.textContent = payload.enable_black_fades ? "scanning..." : "off";
+  statVisualEl.textContent = payload.enable_visual_cuts ? "scanning..." : "off";
+  statSubEl.textContent = payload.enable_subdivide ? "waiting..." : "off";
+  scanLogEl.value = `[Start] ${baseName} | min=${payload.min_seg}s workers=${payload.workers} | Stage1(black)=${payload.enable_black_fades ? payload.black_min_dur + "s" : "OFF"} Stage2(visual)=${payload.enable_visual_cuts ? payload.threshold : "OFF"} Stage3(sub)=${payload.enable_subdivide ? payload.max_seg + "s->" + payload.target_seg + "s" : "OFF"}`;
+
   const res = await fetch("/api/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1152,25 +1244,57 @@ async function startScan(videoPath, forceRefresh) {
   const startData = await res.json();
   if (!startData.ok) {
     setPhaseUI(1, 0, "Error: " + (startData.error || "failed"));
+    appendScanLog("[Error] " + (startData.error || "failed"));
     return;
   }
 
+  let lastPhaseInfo = {};
   const es = new EventSource(`/api/jobs/${startData.job_id}/events`);
   es.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     if (msg.type === "phase") {
       const pct = msg.total > 0 ? (msg.completed / msg.total) * 100 : 100;
       setPhaseUI(msg.phase, pct, msg.info);
+      if (msg.phase === 2 && typeof msg.info === "string") {
+        const m = msg.info.match(/(\d+)\s+black fades\s+·\s+(\d+)\s+visual cuts/);
+        if (m) {
+          if (payload.enable_black_fades) statBlackEl.textContent = `${m[1]} raw`;
+          if (payload.enable_visual_cuts) statVisualEl.textContent = `${m[2]} raw`;
+          progressSummaryEl.textContent = `${Math.round(pct)}% · ${m[1]} black · ${m[2]} visual`;
+        }
+      }
+      if (msg.phase !== 2 && msg.info && lastPhaseInfo[msg.phase] !== msg.info) {
+        lastPhaseInfo[msg.phase] = msg.info;
+        appendScanLog(`[Phase ${msg.phase}/5] ${msg.info}`);
+      }
     } else if (msg.type === "sprite") {
       const pct = msg.total > 0 ? (msg.completed / msg.total) * 100 : 100;
       setPhaseUI("spr", pct, msg.info || "rendering...");
     } else if (msg.type === "complete") {
       es.close();
-      progressBox.classList.add("hidden");
       VIDEO_SRC = `/api/media?path=${encodeURIComponent(msg.video_path)}`;
       SPRITE = msg.sprite;
       CUTS = msg.chapters;
       SUBTITLES = msg.subtitles || [];
+      LAST_STATS = msg.stats || null;
+      if (LAST_STATS) {
+        statBlackEl.textContent = payload.enable_black_fades
+          ? `${LAST_STATS.used_black} cuts (${LAST_STATS.raw_black} raw)`
+          : `off (${LAST_STATS.raw_black} raw)`;
+        statVisualEl.textContent = payload.enable_visual_cuts
+          ? `${LAST_STATS.used_visual} cuts (${LAST_STATS.raw_visual} raw)`
+          : `off (${LAST_STATS.raw_visual} raw)`;
+        statSubEl.textContent = payload.enable_subdivide
+          ? `+${LAST_STATS.sub_cuts} cuts (${LAST_STATS.snapped_cuts} snapped)`
+          : "off";
+        progressSummaryEl.textContent = `${CUTS.length} chapters (${formatMechanismSummary(LAST_STATS)})`;
+      } else {
+        progressSummaryEl.textContent = `${CUTS.length} chapters`;
+      }
+      progressTitleEl.textContent = `Scan Diagnostics — ${msg.video_name}`;
+      if (Array.isArray(msg.logs) && msg.logs.length) {
+        appendScanLog(msg.logs.join("\n"));
+      }
       sourceLoaded = false;
       brandTitle.textContent = msg.video_name;
       setStatus(msg.already_embedded ? "✓ Embedded" : "Unmuxed", false);
@@ -1179,6 +1303,8 @@ async function startScan(videoPath, forceRefresh) {
     } else if (msg.type === "error") {
       es.close();
       setPhaseUI(1, 0, "Error: " + msg.error);
+      progressSummaryEl.textContent = "error";
+      appendScanLog("[Error] " + msg.error);
     }
   };
 }
@@ -1412,7 +1538,8 @@ function renderGallery() {
     gallery.appendChild(card);
   });
 
-  countLabel.textContent = `${visibleCount} / ${CUTS.length} chapters`;
+  const mech = LAST_STATS ? ` (${formatMechanismSummary(LAST_STATS)})` : "";
+  countLabel.textContent = `${visibleCount} / ${CUTS.length} chapters${mech}`;
 }
 
 document.getElementById("switch-video-btn").addEventListener("click", () => {

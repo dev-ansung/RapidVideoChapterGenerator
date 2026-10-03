@@ -14,11 +14,11 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from rvcg.models import BoundaryConfig, SceneSegment, SpriteMeta
+from rvcg.models import BoundaryConfig, BoundaryStats, SceneSegment, SpriteMeta
 from rvcg.muxer import embed_chapters_atomic, export_scene_cut, format_chapters_export
 from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters, safe_float
 from rvcg.scanner import scan_keyframes
-from rvcg.solver import compute_cell_times, segments_from_tuples, solve_boundaries
+from rvcg.solver import compute_cell_times, segments_from_tuples, solve_boundaries_with_stats
 from rvcg.webui import render_webui_html
 
 VIDEO_EXTS = {".mp4", ".mkv", ".mov", ".m4v", ".webm"}
@@ -410,8 +410,15 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 raw_scan, sprite_meta = scan_fut.result()
                 sub_tracks = sub_fut.result()
 
-            if not use_existing:
-                segments = solve_boundaries(duration, raw_scan, cfg, on_phase)
+            if use_existing:
+                stats = BoundaryStats(
+                    logs=[
+                        f"[Embedded] Loaded {len(segments)} existing chapters from container metadata",
+                        *[f"[Result] #{s.id_str} {s.title}: {s.source_range} ({s.duration_str})" for s in segments],
+                    ]
+                )
+            else:
+                segments, stats = solve_boundaries_with_stats(duration, raw_scan, cfg, on_phase)
                 on_phase(5, 1.0, 1.0, f"{len(segments)} chapters ready")
 
             assert sprite_meta is not None
@@ -433,6 +440,8 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                         "sprite": sprite_payload.to_dict(),
                         "chapters": [s.to_dict() for s in segments],
                         "subtitles": [t.to_dict() for t in sub_tracks],
+                        "stats": stats.to_dict(),
+                        "logs": stats.logs,
                     },
                     ensure_ascii=False,
                 )

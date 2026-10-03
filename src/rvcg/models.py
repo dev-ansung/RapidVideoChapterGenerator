@@ -62,6 +62,27 @@ class RawScanResult:
 
 
 @dataclass(frozen=True)
+class BoundaryStats:
+    raw_black: int = 0
+    used_black: int = 0
+    raw_visual: int = 0
+    used_visual: int = 0
+    sub_cuts: int = 0
+    snapped_cuts: int = 0
+    logs: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, int]:
+        return {
+            "raw_black": self.raw_black,
+            "used_black": self.used_black,
+            "raw_visual": self.raw_visual,
+            "used_visual": self.used_visual,
+            "sub_cuts": self.sub_cuts,
+            "snapped_cuts": self.snapped_cuts,
+        }
+
+
+@dataclass(frozen=True)
 class SceneSegment:
     index: int
     start_time: float
