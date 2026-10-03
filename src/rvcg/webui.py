@@ -12,10 +12,11 @@ def render_webui_html(default_dir: str, default_config: BoundaryConfig, initial_
             "workers": default_config.workers,
             "threshold": default_config.scene_threshold,
             "title_template": default_config.title_template,
-        }
+        },
+        ensure_ascii=False,
     )
-    init_dir_json = json.dumps(default_dir)
-    init_vid_json = json.dumps(initial_video)
+    init_dir_json = json.dumps(default_dir, ensure_ascii=False)
+    init_vid_json = json.dumps(initial_video, ensure_ascii=False)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -959,10 +960,10 @@ function highlightActiveCard() {{
 
 function matchesFilter(item) {{
   if (!searchQuery) return true;
-  const q = searchQuery.toLowerCase();
+  const q = searchQuery.normalize("NFC").toLowerCase();
   return (
     item.id.toLowerCase().includes(q) ||
-    item.title.toLowerCase().includes(q) ||
+    item.title.normalize("NFC").toLowerCase().includes(q) ||
     item.source_range.toLowerCase().includes(q)
   );
 }}

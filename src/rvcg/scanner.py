@@ -14,6 +14,7 @@ from rvcg.models import (
     SpriteProgressCallback,
     VisualCut,
 )
+from rvcg.probe import safe_float
 
 
 @dataclass(frozen=True)
@@ -83,24 +84,28 @@ def parse_ffmpeg_line(
         r"black_start:([0-9.]+)\s+black_end:([0-9.]+)\s+black_duration:([0-9.]+)",
         line,
     ):
-        bs, be = float(m.group(1)), float(m.group(2))
-        blacks.append(t_start + (bs + be) / 2.0)
+        bs = safe_float(m.group(1))
+        be = safe_float(m.group(2))
+        if bs is not None and be is not None:
+            blacks.append(t_start + (bs + be) / 2.0)
 
-    m_pts = re.search(r"pts_time:([0-9.]+)", line)
+    m_pts = re.search(r"pts_time:([^\s]+)", line)
     if m_pts:
-        next_local_t = float(m_pts.group(1))
-        prog_sec = min(chunk_dur, next_local_t)
+        parsed_pts = safe_float(m_pts.group(1))
+        if parsed_pts is not None:
+            next_local_t = parsed_pts
+            prog_sec = min(chunk_dur, parsed_pts)
 
-    m_sc = re.search(r"lavfi\.scene_score=([0-9.]+)", line)
+    m_sc = re.search(r"lavfi\.scene_score=([^\s]+)", line)
     if m_sc and next_local_t is not None:
-        cuts.append(VisualCut(timestamp=t_start + next_local_t, score=float(m_sc.group(1))))
+        parsed_sc = safe_float(m_sc.group(1))
+        if parsed_sc is not None:
+            cuts.append(VisualCut(timestamp=t_start + next_local_t, score=parsed_sc))
 
     if line.startswith("out_time_us="):
-        try:
-            sec = int(line.split("=", 1)[1].strip()) / 1_000_000.0
-            prog_sec = min(chunk_dur, sec)
-        except ValueError:
-            pass
+        raw_us = safe_float(line.split("=", 1)[1].strip())
+        if raw_us is not None and raw_us >= 0:
+            prog_sec = min(chunk_dur, raw_us / 1_000_000.0)
 
     return LineParseEvent(
         black_midpoints=blacks,
@@ -246,7 +251,8 @@ def scan_keyframes(
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
         )
         cur_local_t: float | None = None

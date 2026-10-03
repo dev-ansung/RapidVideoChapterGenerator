@@ -2,11 +2,11 @@ import argparse
 import hashlib
 import os
 import re
-import shlex
 import sys
 import tempfile
 import termios
 import time
+import unicodedata
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
@@ -30,7 +30,7 @@ from rvcg.muxer import embed_chapters_atomic, format_chapters_export
 from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters
 from rvcg.renderer import write_index_html
 from rvcg.scanner import scan_keyframes
-from rvcg.server import create_lifecycle_server
+from rvcg.server import create_lifecycle_server, resolve_any_path
 from rvcg.solver import segments_from_tuples, solve_boundaries
 
 console = Console(stderr=True)
@@ -53,16 +53,8 @@ def parse_duration_sec(val: str | float | int) -> float:
 
 
 def clean_input_path(raw: str) -> Path | None:
-    s = raw.strip()
-    if not s:
-        return None
-    try:
-        parts = shlex.split(s)
-        cleaned = parts[0] if parts else s
-    except ValueError:
-        cleaned = re.sub(r"\\(.)", r"\1", s.strip("'\""))
-    p = Path(cleaned).expanduser().resolve()
-    return p if p.is_file() else None
+    resolved, kind = resolve_any_path(raw)
+    return resolved if kind == "file" else None
 
 
 def restore_tty() -> None:
@@ -92,7 +84,8 @@ def prompt_video_file(search_dir: Path | None = None) -> Path:
         console.print(f"[bold cyan]Videos in {base_dir}:[/bold cyan]")
         for idx, vf in enumerate(videos, 1):
             size_mb = vf.stat().st_size / (1024 * 1024)
-            console.print(f"  [bold yellow]{idx:2d}[/bold yellow]) {vf.name} [dim]({size_mb:.0f} MB)[/dim]")
+            disp_name = unicodedata.normalize("NFC", vf.name)
+            console.print(f"  [bold yellow]{idx:2d}[/bold yellow]) {disp_name} [dim]({size_mb:.0f} MB)[/dim]")
 
     prompt_label = (
         "\n[bold yellow]?[/bold yellow] Select video #, drag & drop path, or [bold]q[/bold] to quit"
@@ -143,7 +136,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum duration before smart subdivision (e.g. 600, 10m)",
     )
     parser.add_argument(
-        "--target-scene-len", type=str, default=None, help="Target duration when subdividing long gaps (e.g. 360, 6m)"
+        "--target-scene-len",
+        type=str,
+        default=None,
+        help="Target duration when subdividing long gaps (e.g. 360, 6m)",
     )
     parser.add_argument(
         "--preset",
@@ -208,9 +204,11 @@ def process_video(
     config: BoundaryConfig,
     interactive: bool,
 ) -> None:
-    if not video_path.exists():
+    resolved_vid = clean_input_path(str(video_path))
+    if resolved_vid is None:
         console.print(f"[bold red]Error:[/bold red] File not found: {video_path}")
         return
+    video_path = resolved_vid
 
     t0 = time.perf_counter()
     duration = probe_duration(video_path)
@@ -219,16 +217,17 @@ def process_video(
     should_refresh = bool(args.refresh)
 
     stat = video_path.stat()
-    digest = hashlib.sha1(f"{video_path}:{stat.st_size}:{int(stat.st_mtime)}".encode()).hexdigest()[:10]
-    browser_dir = Path(tempfile.gettempdir()) / f"browse_video_{video_path.stem}_{digest}"
+    digest = hashlib.sha1(f"{video_path}:{stat.st_size}:{int(stat.st_mtime)}".encode("utf-8")).hexdigest()[:12]
+    browser_dir = Path(tempfile.gettempdir()) / f"rvcg_browser_{digest}"
     index_html = browser_dir / "index.html"
+    disp_name = unicodedata.normalize("NFC", video_path.name)
 
     existing_chapters = [] if should_refresh else probe_embedded_chapters(video_path)
     if len(existing_chapters) >= 3 and interactive and not should_refresh:
         try:
             restore_tty()
             should_refresh = Confirm.ask(
-                f"[bold yellow]?[/bold yellow] [cyan]{video_path.name}[/cyan] already has {len(existing_chapters)} chapters. Re-detect?",
+                f"[bold yellow]?[/bold yellow] [cyan]{disp_name}[/cyan] already has {len(existing_chapters)} chapters. Re-detect?",
                 default=False,
                 console=console,
             )
@@ -244,7 +243,7 @@ def process_video(
             webbrowser.open(index_html.as_uri())
         return
 
-    console.print(f"[bold cyan]Video:[/bold cyan] {video_path.name} ([bold]{fmt_hms(duration)}[/bold])")
+    console.print(f"[bold cyan]Video:[/bold cyan] {disp_name} ([bold]{fmt_hms(duration)}[/bold])")
 
     with Progress(
         SpinnerColumn(),
@@ -351,11 +350,19 @@ def process_video(
 
     elapsed = time.perf_counter() - t0
     if want_browse and sprite_meta is not None:
-        video_link = browser_dir / target_video.name
+        safe_link_name = f"video{target_video.suffix.lower()}"
+        video_link = browser_dir / safe_link_name
         if video_link.exists() or video_link.is_symlink():
             video_link.unlink()
         video_link.symlink_to(target_video)
-        write_index_html(browser_dir, target_video.stem, target_video.name, segments, sprite_meta, sub_tracks)
+        write_index_html(
+            browser_dir,
+            unicodedata.normalize("NFC", target_video.stem),
+            safe_link_name,
+            segments,
+            sprite_meta,
+            sub_tracks,
+        )
         console.print(
             f"[bold green]✓ Ready in {elapsed:.1f}s![/bold green] "
             f"{len(segments)} chapters embedded · {sprite_meta.total_frames} sprite frames -> {index_html}"
@@ -402,13 +409,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     config = resolve_config(args)
 
     if args.ui or (args.video is None and not args.cli_prompt):
-        init_vid = args.video.expanduser().resolve() if args.video is not None else None
+        init_vid = clean_input_path(str(args.video)) if args.video is not None else None
         base_dir = init_vid.parent if init_vid is not None else Path.cwd()
         run_web_studio(base_dir, config, init_vid, int(args.port), bool(args.no_open))
         return
 
     if args.video is not None:
-        process_video(args.video.expanduser().resolve(), args, config, interactive=False)
+        process_video(args.video.expanduser(), args, config, interactive=False)
         if not sys.stdin.isatty() or args.format != "mp4" or not args.cli_prompt:
             return
         console.print()
