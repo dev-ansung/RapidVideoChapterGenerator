@@ -1,27 +1,73 @@
 # RapidVideoChapterGenerator
 
+> **Scan multi-hour videos in seconds, browse every scene in a 3×3 interactive contact grid, and inject native chapter markers with one command — zero re-encoding, zero quality loss.**
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-green.svg)](https://python.org)
-[![Zero Re-encode](https://img.shields.io/badge/Video%20Quality-100%25%20Lossless-orange.svg)](#technical-overview)
-[![Platform Compatibility](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](#installation)
-
-**RapidVideoChapterGenerator** automatically detects scene boundaries and injects native chapter markers into video files at ~3,400× real-time speed. Processing is 100% lossless (`-c copy`), requires zero re-encoding, and works out of the box across QuickTime, IINA, VLC, mpv, Plex, and YouTube.
+[![Speed](https://img.shields.io/badge/Speed-~3%2C400%C3%97%20Real--Time-brightgreen.svg)](#performance-benchmark)
+[![Zero Re-encode](https://img.shields.io/badge/Video%20Quality-100%25%20Lossless-orange.svg)](#5-architectural-philosophy-keyframe-first-hybrid-pipeline)
+[![Platform Compatibility](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](#4-installation--safety-boundaries)
+[![GitHub Stars](https://img.shields.io/github/stars/dev-ansung/RapidVideoChapterGenerator?style=social)](https://github.com/dev-ansung/RapidVideoChapterGenerator/stargazers)
 
 [![RapidVideoChapterGenerator Demo](docs/demo.gif)](docs/demo.mp4)
 
 ---
 
-## Key Capabilities
+## 1. The Problem vs. One-Liner Fix
 
-* **Multi-Core Keyframe Acceleration:** Partitions video timelines across parallel workers using I-frame-only decoding (`-skip_frame nokey`) and $240\times 135$ downscaled luminance/scene analysis to scan multi-hour videos in seconds.
-* **5-Stage Hybrid Boundary Solver:** Combines fade-to-black detection (`blackdetect`) with perceptual visual cut scoring (`select='gt(scene,...)'`), priority anchor placement, smart long-segment subdivision, and micro-tail merging.
-* **Web Lifecycle Studio (`rapid-chapters`):** Built-in local web app with a full-width file browser, live 5-phase SSE scan progress, 9-cell `3×3` Grid and `144:9` List scene views, a movable/resizable floating video player (`interact.js`) with subtitle auto-loading, interactive chapter editing (rename, split at playhead, delete/merge), and optional 1-click chapter muxing.
-* **Lossless Atomic Injection:** Operates exclusively at the container level (`-c copy -movflags +faststart`). Video bitstreams, audio tracks, HDR/Dolby Vision metadata, and embedded subtitles remain untouched, with safe atomic in-place replacement.
-* **Native Player & Unicode Support:** Writes standard container chapter atoms (`chpl` / `FFMETADATA1`) with full NFC/NFD Unicode filename and chapter title support across macOS, Linux, and Windows.
+Long-form video files (movies, VOD streams, lectures, raw recordings) without chapter markers are painful to navigate, and existing tools force a choice between slow full-frame decoding or destructive re-encoding:
+
+* **Blind timeline scrubbing:** Dragging a 2-pixel playhead across a 4-hour MP4 trying to find where a specific scene starts (`"Was that at 01:14:00 or 02:38:00?"`).
+* **20–45 minute full-frame scene scans:** Traditional detectors (`PySceneDetect`, standard `ffmpeg select`) decode every single frame of a 1080p/4K stream, pegging all CPU cores for half an hour on a single movie.
+* **Destructive NLE / HandBrake workflows:** Importing multi-GB files into an editor just to add chapter markers triggers full re-encodes (`2+ hours`, generational quality loss, stripped HDR/Dolby Vision metadata).
+* **Over-fragmented chapters:** Naive scene-score thresholds create 400+ micro-chapters during fast action while leaving 45-minute dead zones during dialogue.
+
+### The One-Liner Fix
+
+```bash
+# Launch the interactive Web Lifecycle Studio (browse, preview scenes, edit, and mux on click)
+uvx --from git+https://github.com/dev-ansung/RapidVideoChapterGenerator.git rapid-chapters
+
+# Or detect scenes and inject native MP4/MKV chapters in-place in seconds
+uvx --from git+https://github.com/dev-ansung/RapidVideoChapterGenerator.git rapid-chapters input.mp4
+```
+
+**Using an AI Coding Agent (Claude Code, Cursor, Antigravity, OpenClaw)?** Paste this single prompt:
+
+```text
+Install and run https://github.com/dev-ansung/RapidVideoChapterGenerator via `uvx --from git+https://github.com/dev-ansung/RapidVideoChapterGenerator.git rapid-chapters` to detect and embed lossless chapter markers.
+```
 
 ---
 
-## Performance Benchmark
+## 2. Core FAQ & Compatibility Matrix
+
+### Quick Answers
+
+| Question | Answer |
+| :--- | :--- |
+| **Does it re-encode or degrade video quality?** | **Never.** Muxing uses `ffmpeg -c copy -movflags +faststart`. Video bitstreams, audio tracks, HDR/Dolby Vision metadata, and subtitles are copied bit-for-bit. |
+| **Does the Web UI modify my video automatically?** | **No.** Scanning in the Web Studio is 100% read-only. Chapters are only written into the video file if you explicitly click **`Embed Chapters`**. |
+| **How fast is a 3-hour movie or 11-hour VOD?** | **~3–4 seconds** for a 3-hour movie (`Titanic 720p`), **~12 seconds** for an 11.5-hour 1080p archive (~3,400× real-time on Apple Silicon). |
+| **What if the video already has embedded chapters?** | **Instant reuse (`<50 ms`).** Existing chapters are detected via `ffprobe` and loaded immediately unless `--refresh` (or **`↻ Re-Detect`**) is clicked. |
+| **Does it support Unicode/CJK filenames and `.srt` subtitles?** | **Yes.** Full macOS NFD / Linux NFC Unicode path resolution and automatic external `.srt`/`.vtt` + embedded subtitle track extraction. |
+
+### Player & Platform Matrix
+
+| Target / Platform | Out-of-the-Box Behavior | Mechanism / Format | How to Use |
+| :--- | :--- | :--- | :--- |
+| **Web Lifecycle Studio** | Full 9-cell `3×3` Grid & `144:9` List browser + movable player | Local HTTP Range + SSE | `rapid-chapters` (no arguments) |
+| **IINA / mpv** | Native timeline chapter ticks & chapter menu | Container atoms (`chpl` / `FFMETADATA1`) | `rapid-chapters video.mp4` |
+| **QuickTime Player / Apple TV** | Native chapter selector dropdown & scrub markers | MP4/MOV `chpl` + track reference | `rapid-chapters video.mp4` |
+| **VLC Media Player** | Native `Playback ▸ Chapters` navigation | MP4 / MKV / MOV chapter atoms | `rapid-chapters video.mp4` |
+| **Plex / Jellyfin / Emby** | Automatic chapter list & scene jumping | Container chapter metadata | `rapid-chapters video.mp4` |
+| **YouTube Descriptions** | Copy-ready `HH:MM:SS - Title` chapter list | Plain text (`youtube`) | `rapid-chapters video.mp4 -f youtube` |
+| **Podcasting 2.0 / Automation** | Structured start/end/duration/title manifest | `json` / `csv` / `ffmetadata` | `rapid-chapters video.mp4 -f json` |
+| **Standalone HTML Archive** | Static zero-server `3×3` contact-sheet gallery | Self-contained HTML + sprite sheet | `rapid-chapters video.mp4 --browse` |
+
+---
+
+## 3. Performance Benchmark
 
 Test environment: **11 hr 35 min (7.2 GB)** 1080p AVC video on Apple Silicon (8 parallel workers).
 
@@ -34,11 +80,11 @@ Test environment: **11 hr 35 min (7.2 GB)** 1080p AVC video on Apple Silicon (8 
 
 ---
 
-## Installation
+## 4. Installation & Safety Boundaries
 
 ### Prerequisites
 
-Requires `ffmpeg` (`ffmpeg` and `ffprobe`) installed and available in your system `PATH`:
+Requires `ffmpeg` (`ffmpeg` and `ffprobe`) in your system `PATH`:
 
 ```bash
 # macOS
@@ -51,125 +97,78 @@ sudo apt update && sudo apt install ffmpeg
 winget install Gyan.FFmpeg
 ```
 
-### Run Instantly with `uvx` (Zero Install)
+### Install Globally or From Source
 
 ```bash
-# Launch Web Lifecycle Studio
-uvx --from git+https://github.com/dev-ansung/RapidVideoChapterGenerator.git rapid-chapters
-
-# Or process a video directly from the CLI
-uvx --from git+https://github.com/dev-ansung/RapidVideoChapterGenerator.git rapid-chapters input.mp4
-```
-
-### Install via `uv` or `pip`
-
-```bash
-# Install globally as a CLI tool via uv
+# Install globally as a CLI tool via uv (provides `rapid-chapters` and `rvcg`)
 uv tool install git+https://github.com/dev-ansung/RapidVideoChapterGenerator.git
 
-# Or install from source in editable mode
+# Or clone and install in editable mode
 git clone https://github.com/dev-ansung/RapidVideoChapterGenerator.git
 cd RapidVideoChapterGenerator
 uv pip install -e .
 ```
 
+### Safety & Non-Destructive Modes
+
+* **Read-Only Web Preview (`rapid-chapters`):** Opening and scanning any video in the Web Studio only writes temporary sprite sheets to your OS temp directory (`/tmp/rvcg_browser_<hash>`). Your source video file is never modified unless you click **`Embed Chapters`**.
+* **Read-Only Text Export (`-f youtube | json | csv | ffmetadata`):** Prints chapter markers to `stdout` (or `-o chapters.txt`) without touching the media file.
+* **Separate Container Output (`-o output.mp4`):** Writes the chapter-muxed video to a new file path, preserving the original file untouched.
+* **Crash-Safe Atomic In-Place Muxing (`rapid-chapters input.mp4`):** Remuxes into a temporary sibling file (`*.rvcg_tmp.*`) and only performs an atomic `os.replace()` after `ffmpeg` verifies a clean `0` exit status. If interrupted (`Ctrl+C`), the partial temp file is cleaned up and the original video remains intact.
+
 ---
 
-## Quick Start
+## 5. Architectural Philosophy ("Keyframe-First Hybrid Pipeline")
 
-### 1. Web Lifecycle Studio (No-Argument Frontend)
-
-Run without arguments (or pass `--ui`) to launch the interactive **Web Lifecycle Studio** in your browser:
-
-```bash
-rapid-chapters
-```
-
-* **Select & Scan:** Browse local directories or paste a video path to run the parallel keyframe scan with live progress bars.
-* **Browse & Preview:** Inspect every chapter via a 9-cell `3×3` contact grid (or `144:9` widescreen filmstrip in List mode) with live cell hover video previews.
-* **Floating Movable/Resizable Player:** Click any scene thumbnail to open the floating video player (`interact.js` draggable and 8-edge resizable) with automatic `.srt`/embedded subtitle rendering and seekbar sprite-sheet scrubbing.
-* **Edit, Export, or Embed:** Rename chapters inline, split chapters at the current playhead (`✂ Split Here`), delete/merge scenes, export timestamps (`Export ▾`), or click **`Embed Chapters`** to mux chapters losslessly (`-c copy`) into the video.
-
-### 2. Detect Scenes and Embed Chapters via CLI
-
-Atomically inject native chapter markers directly into the input video without creating duplicate files:
-
-```bash
-rapid-chapters input.mp4
-```
-
-Or write to a separate output container:
-
-```bash
-rapid-chapters input.mp4 -o output.mp4
-```
-
-### 3. Export YouTube Description Timestamps
-
-Generate formatted chapter timestamps to `stdout` without modifying the video file:
-
-```bash
-rapid-chapters input.mp4 --format youtube
-```
-
-Output:
+**RapidVideoChapterGenerator** is built on a simple observation: camera cuts, fade-to-blacks, and scene transitions in encoded video streams overwhelmingly trigger or align with GOP keyframes (I-frames). Instead of decoding all 30–60 frames per second at full resolution, the engine partitions the container across parallel `ffmpeg` worker processes that decode **only keyframes** (`-skip_frame nokey`) downscaled to $240\times 135$, extracting both visual boundary signals and timeline sprite strips in a single pass.
 
 ```text
-00:00:00 - Scene 01
-00:05:42 - Scene 02
-00:12:18 - Scene 03
-00:19:04 - Scene 04
-```
-
-### 4. Generate a Standalone 3×3 HTML5 Scene Browser
-
-Embed chapters and open a static, zero-server HTML5 3×3 contact-sheet gallery:
-
-```bash
-rapid-chapters input.mp4 --browse
-```
-
----
-
-## Common Use Cases
-
-### Long-Form VODs, Archives, and Raw Footage
-Keep chapters within a comfortable 3-to-10 minute window while snapping splits to natural camera cuts:
-
-```bash
-rapid-chapters archive.mp4 --min-scene-len 180 --max-scene-len 600 --target-scene-len 360
-```
-
-### Podcasts and Interviews
-Avoid triggering chapter splits on rapid camera angle switches by increasing the minimum scene duration and scene score threshold:
-
-```bash
-rapid-chapters interview.mp4 --min-scene-len 120 --threshold 0.45
-```
-
-### Slide Presentations and Lectures
-Use the presentation preset to capture crisp slide transitions:
-
-```bash
-rapid-chapters lecture.mp4 --preset presentation -o lecture_chaptered.mp4
+src/rvcg/
+├── cli.py        ▸ Entrypoint & mode router (Web Studio vs. CLI batch vs. static browser)
+├── server.py     ▸ ThreadingHTTPServer (Range media streaming, SSE scan jobs, REST chapter ops)
+├── probe.py      ▸ ffprobe duration fallback chain + embedded chapter & subtitle extraction
+├── scanner.py    ▸ N-worker parallel I-frame scanner (blackdetect + scene score + sprite strips)
+├── solver.py     ▸ 5-stage hybrid boundary solver (anchors ▸ gap subdivision ▸ tail merge ▸ 9-cell sample)
+├── muxer.py      ▸ FFMETADATA1 manifest builder + crash-safe atomic `-c copy` container remuxer
+└── static/
+    ├── webui.html    ▸ Two-view Web Lifecycle Studio (Tippy.js file list + 3×3 browser + interact.js player)
+    └── browser.html  ▸ Standalone zero-server HTML5 3×3 contact-sheet browser
 ```
 
 ---
 
-## Player and Platform Compatibility
+## 6. Algorithm & Tool Selection Rationale
 
-| Target | Embedded Container Chapters | Timestamp / Metadata Export |
-| :--- | :---: | :---: |
-| **IINA / mpv** | Supported (Timeline ticks & chapter menu) | Not Applicable |
-| **QuickTime Player** | Supported | Not Applicable |
-| **VLC Media Player** | Supported (`Playback > Chapters`) | Not Applicable |
-| **Plex / Jellyfin** | Supported | Not Applicable |
-| **YouTube** | Not Applicable | Supported (`--format youtube`) |
-| **Podcasting 2.0 / Pipelines** | Not Applicable | Supported (`--format json` / `csv`) |
+| Stage / Component | Primary Mechanism | Fallback / Secondary | Technical Rationale |
+| :--- | :--- | :--- | :--- |
+| **1. Duration & Metadata Probe** | `ffprobe` format duration | Stream duration ▸ `HH:MM:SS` tags | Handles MKV/WebM files where container-level duration is reported as `"N/A"`. |
+| **2. Parallel Visual Scan** | `ffmpeg -skip_frame nokey` + `scale=240:135:flags=fast_bilinear` | Single-pass `split=2` filtergraph | Bypasses P/B-frame inter-prediction decoding for a ~30–50× speedup while simultaneously rendering thumbnail strips. |
+| **3. Priority Anchor Placement** | Fade-to-black midpoints (`blackdetect`) | High-scoring visual cuts (`scene > th`) | Black fades represent deliberate editorial act breaks; visual cuts fill remaining gaps while respecting `--min-scene-len`. |
+| **4. Long-Segment Subdivision** | Local visual cut snapping ($\pm 45\text{s}$ window) | Uniform target-length split | Prevents 30-minute unchaptered stretches in dialogue-heavy films while still landing splits on real camera cuts. |
+| **5. Container Remux** | `ffmpeg -c copy -movflags +faststart` | Atomic sibling temp file + `os.replace` | Zero-transcode container update in $<1\text{s}$ with web-optimized `moov` atom placement and crash safety. |
+| **6. Interactive Web UI** | `Video.js` + `interact.js` + `Tippy.js` | Native HTML5 `<video>` cell previews | Provides a freely movable, 8-edge resizable floating player, unclipped filename tooltips, and 9-cell `3×3` scene cards. |
 
 ---
 
-## Command-Line Interface
+## 7. Lifecycle Management & CLI Reference
+
+### Preset Profiles
+
+```bash
+# Default (movies & general video: min 3m, max 10m, target 6m, threshold 0.38)
+rapid-chapters movie.mp4
+
+# Podcast / Interview (avoids splits on frequent camera switches: min 2m, max 15m, threshold 0.45)
+rapid-chapters interview.mp4 --preset podcast
+
+# Presentation / Lecture (captures slide transitions: min 1m, max 10m, threshold 0.30)
+rapid-chapters lecture.mp4 --preset presentation
+
+# Action / Fast-Paced (tighter chapter intervals: min 1.5m, max 7m, threshold 0.35)
+rapid-chapters gameplay.mp4 --preset action
+```
+
+### CLI Options
 
 ```text
 Usage: rapid-chapters [OPTIONS] [INPUT_VIDEO]
@@ -200,30 +199,20 @@ Output & UI Options:
   --refresh                       Force re-scan even if embedded chapters or cached browser exist
 ```
 
----
+### Cache & Uninstallation
 
-## Technical Overview
+```bash
+# Clear cached sprite sheets and temporary browser assets
+rm -rf "${TMPDIR:-/tmp}"/rvcg_browser_*
 
-1. **Embedded Chapter Fast-Path (`Phase 1`):** Probes container metadata first via `ffprobe`; if chapters are already present and `--refresh` is not set, reuses them in $<50\text{ ms}$.
-2. **Parallel Keyframe Visual Scan (`Phase 2`):** Splits the timeline into $N$ chunks across worker processes, decodes only I-frames (`-skip_frame nokey`), downscales to $240\times 135$ (`fast_bilinear`), and runs `blackdetect` + `select='gt(scene,th)'` in a single filtergraph pass.
-3. **Priority Anchor Placement (`Phase 3`):** Places primary boundary anchors at black-frame transitions first, then greedily inserts the highest-scoring visual cuts that satisfy `--min-scene-len`.
-4. **Smart Long-Segment Subdivision (`Phase 4`):** Subdivides any remaining segments longer than `--max-scene-len` toward `--target-scene-len`, snapping subdivision cuts to nearby visual transitions within a $\pm 45\text{s}$ window.
-5. **Tail Merge & Lossless Remux (`Phase 5`):** Merges trailing micro-segments ($<20\text{s}$), generates an `FFMETADATA1` chapter manifest, and runs `ffmpeg -map 0 -map_metadata 1 -map_chapters 1 -c copy` into a temporary sibling file before atomically replacing the target video.
-
----
-
-## Contributing
-
-Pull requests and issues are welcome:
-
-1. Fork the repository.
-2. Create an isolated feature branch (`git checkout -b feature/improvement`).
-3. Run the verification suite (`uv run ruff check . && uv run mypy --strict src tests && uv run pytest`).
-4. Commit your changes using conventional commits (`git commit -m "feat(solver): add presentation preset"`).
-5. Push to your branch and open a Pull Request.
+# Uninstall global CLI tool
+uv tool uninstall rapid-video-chapter-generator
+```
 
 ---
 
-## License
+## 8. Credits & License
 
-This project is licensed under the [MIT License](LICENSE).
+* **Upstream Open-Source Credits:** Built on top of [FFmpeg](https://ffmpeg.org/), [Video.js](https://videojs.com/), [interact.js](https://interactjs.io/), [Tippy.js](https://atomiks.github.io/tippyjs/), and [Rich](https://github.com/Textualize/rich).
+* **Star & Contribute:** If **RapidVideoChapterGenerator** saves you time navigating long videos, consider starring the repository! Issues and pull requests are welcome.
+* **License:** Released under the [MIT License](LICENSE).
