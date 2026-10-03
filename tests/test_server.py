@@ -72,9 +72,10 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
         with urllib.request.urlopen(f"{base_url}/", timeout=5) as root_resp:
             html = root_resp.read().decode("utf-8")
             assert "RapidVideoChapterGenerator" in html
+            assert "daisyui" in html
+            assert "/static/js/main.js" in html
             assert 'id="picker-view"' in html
             assert 'id="browser-view"' in html
-            assert "aspect-ratio: 144 / 9" in html
             assert "mode-docked" not in html
             assert "interact.min.js" in html
             assert "tippy-bundle.umd.min.js" in html
@@ -101,8 +102,32 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert 'id="reveal-file-btn"' in html
             assert "ph-folder-open" in html
             assert 'value="black-fades"' in html
-            assert "function isInPip()" in html
-            assert "if (!isInPip())" in html
+
+        for mod_name in (
+            "main.js",
+            "state.js",
+            "api.js",
+            "player.js",
+            "gallery.js",
+            "picker.js",
+            "trim-modal.js",
+            "settings.js",
+        ):
+            with urllib.request.urlopen(f"{base_url}/static/js/{mod_name}", timeout=5) as js_resp:
+                assert js_resp.status == 200
+                js_body = js_resp.read().decode("utf-8")
+                assert len(js_body) > 50
+                if mod_name == "player.js":
+                    assert "function isInPip()" in js_body
+                    assert "if (!isInPip())" in js_body
+                if mod_name == "gallery.js":
+                    assert "144/9" in js_body
+
+        try:
+            urllib.request.urlopen(f"{base_url}/static/../server.py", timeout=5)
+            raise AssertionError("Expected 404 for static path traversal")
+        except urllib.error.HTTPError as err:
+            assert err.code == 404
 
         fs_data = _get_json(f"{base_url}/api/fs")
         videos = fs_data.get("videos")

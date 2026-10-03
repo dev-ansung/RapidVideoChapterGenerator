@@ -21,7 +21,7 @@ from rvcg.muxer import embed_chapters_atomic, export_scene_cut, format_chapters_
 from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters, safe_float
 from rvcg.scanner import scan_keyframes
 from rvcg.solver import compute_cell_times, segments_from_tuples, solve_boundaries_with_stats
-from rvcg.webui import render_webui_html
+from rvcg.webui import STATIC_DIR, render_webui_html
 
 VIDEO_EXTS = {".mp4", ".mkv", ".mov", ".m4v", ".webm"}
 
@@ -155,6 +155,30 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+            return
+
+        if route.startswith("/static/"):
+            rel_part = urllib.parse.unquote(route[len("/static/") :])
+            static_root = STATIC_DIR.resolve()
+            candidate = (static_root / rel_part).resolve()
+            if not candidate.is_relative_to(static_root) or not candidate.is_file():
+                self.send_error(404, "Static asset not found")
+                return
+            data = candidate.read_bytes()
+            ext = candidate.suffix.lower()
+            if ext == ".js":
+                ctype = "text/javascript; charset=utf-8"
+            elif ext == ".css":
+                ctype = "text/css; charset=utf-8"
+            else:
+                guessed, _ = mimetypes.guess_type(str(candidate))
+                ctype = guessed or "application/octet-stream"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
             return
 
         if route == "/api/fs":

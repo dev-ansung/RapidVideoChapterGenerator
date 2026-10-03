@@ -1,1316 +1,311 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>RapidVideoChapterGenerator</title>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet" />
-<style>
-  :root {
-    --bg: #0b0c10;
-    --panel: #12141c;
-    --panel-alt: #171a24;
-    --border: #232736;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
-    --success: #10b981;
-    --danger: #ef4444;
-    --text: #f3f4f6;
-    --muted: #9ca3af;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    min-height: 100vh;
-    font-size: 13px;
-  }
-  .hidden { display: none !important; }
-  .flex-1 { flex: 1; }
-  .w-full { width: 100%; }
-
-  button {
-    background: #1b1f2e;
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 5px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    font-variant-numeric: tabular-nums;
-    transition: background 0.12s ease, border-color 0.12s ease;
-    white-space: nowrap;
-  }
-  button:hover {
-    background: #252b3f;
-    border-color: var(--accent);
-  }
-  button.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-  button.primary:hover {
-    background: var(--accent-hover);
-  }
-  button.success {
-    background: var(--success);
-    border-color: var(--success);
-    color: #fff;
-  }
-  .text-input, .search-input, select {
-    background: var(--bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 5px 9px;
-    font-size: 12px;
-    outline: none;
-  }
-  .text-input:focus, .search-input:focus, select:focus {
-    border-color: var(--accent);
-  }
-
-  #picker-view {
-    max-width: 840px;
-    margin: 32px auto;
-    padding: 0 16px 40px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .picker-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .picker-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .picker-title {
-    font-size: 15px;
-    font-weight: 700;
-  }
-  .path-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-  .settings-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border);
-  }
-  .settings-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-  }
-  .pipeline-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 8px;
-  }
-  .stage-card {
-    background: var(--panel-alt);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    transition: opacity 0.12s ease, border-color 0.12s ease;
-  }
-  .stage-card.disabled {
-    opacity: 0.48;
-  }
-  .stage-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-  }
-  .stage-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-    cursor: pointer;
-  }
-  .stage-stat {
-    font-size: 11px;
-    font-family: Menlo, Monaco, monospace;
-    color: #38bdf8;
-    font-variant-numeric: tabular-nums;
-  }
-  .stage-fields {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-  }
-  .field-group {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11.5px;
-    color: var(--muted);
-  }
-  .settings-panel .field-group input {
-    width: 66px;
-  }
-  .field-group input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .file-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-height: 360px;
-    overflow-y: auto;
-  }
-  .file-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    min-width: 0;
-    background: var(--panel-alt);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 7px 11px;
-    cursor: pointer;
-    font-size: 12.5px;
-    text-align: left;
-  }
-  .file-item:hover {
-    border-color: var(--accent);
-  }
-  .file-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 600;
-    min-width: 0;
-    flex: 1;
-  }
-  .file-meta {
-    font-size: 11px;
-    color: var(--muted);
-    flex-shrink: 0;
-    font-variant-numeric: tabular-nums;
-  }
-  .tippy-box {
-    background-color: #1b1f2e;
-    border: 1px solid var(--accent);
-    color: var(--text);
-    font-size: 12px;
-    overflow-wrap: anywhere;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75);
-  }
-  .tippy-arrow {
-    color: #1b1f2e;
-  }
-
-  .progress-box {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-  }
-  .progress-summary-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    user-select: none;
-  }
-  .progress-summary-meta {
-    font-size: 11.5px;
-    font-family: Menlo, Monaco, monospace;
-    color: #38bdf8;
-    font-weight: 500;
-  }
-  .progress-body {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-  }
-  .phase-row {
-    display: grid;
-    grid-template-columns: 210px 1fr 48px 230px;
-    gap: 10px;
-    align-items: center;
-    font-size: 11.5px;
-    font-family: Menlo, Monaco, monospace;
-  }
-  .phase-bar-bg {
-    height: 7px;
-    background: #1e2333;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .phase-bar-fill {
-    height: 100%;
-    background: var(--accent);
-    width: 0%;
-    transition: width 0.15s ease;
-  }
-  .phase-info {
-    color: #38bdf8;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: help;
-  }
-  .scan-log {
-    margin-top: 4px;
-    width: 100%;
-    height: 150px;
-    background: var(--bg);
-    color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
-    font-family: Menlo, Monaco, monospace;
-    font-size: 11px;
-    line-height: 1.45;
-    resize: vertical;
-    outline: none;
-  }
-
-  #browser-view {
-    max-width: 1760px;
-    margin: 0 auto;
-    padding: 10px 16px 48px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .toolbar {
-    position: sticky;
-    top: 8px;
-    z-index: 30;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(18, 20, 28, 0.94);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 7px 12px;
-  }
-  .toolbar-left, .toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    flex-wrap: wrap;
-  }
-  .brand {
-    font-size: 13.5px;
-    font-weight: 700;
-    max-width: 340px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .search-input {
-    width: 220px;
-  }
-  .count-label {
-    font-size: 11.5px;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
-  .status-pill {
-    font-size: 11.5px;
-    color: var(--success);
-    font-weight: 600;
-  }
-  .status-pill.error {
-    color: var(--danger);
-  }
-  .reveal-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 7px;
-    font-size: 15px;
-    line-height: 1;
-    color: var(--text);
-    background: var(--panel-alt);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-  }
-  .reveal-icon-btn:hover {
-    color: #fff;
-    border-color: var(--accent);
-    background: #252b3f;
-  }
-  .view-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-  .menu-wrap {
-    position: relative;
-  }
-  .dropdown-menu {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 4px);
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 140px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7);
-    z-index: 40;
-  }
-  .dropdown-menu button {
-    text-align: left;
-    border: none;
-    background: transparent;
-    padding: 6px 10px;
-  }
-  .dropdown-menu button:hover {
-    background: #252b3f;
-  }
-
-  .gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 10px;
-  }
-  .card {
-    background: var(--panel);
-    border: 1px solid #282d3e;
-    border-radius: 6px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: border-color 0.14s ease;
-  }
-  .card:hover,
-  .card.active {
-    border-color: var(--accent);
-  }
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-    padding: 5px 8px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-  }
-  .card-header-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    flex: 1;
-  }
-  .card-header-right {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex-shrink: 0;
-  }
-  .cut-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    display: inline-block;
-    cursor: help;
-  }
-  .cut-black {
-    background: #9ca3af;
-    border: 1px solid #6b7280;
-  }
-  .cut-visual {
-    background: #f9fafb;
-    border: 1px solid #d1d5db;
-  }
-  .cut-subdiv {
-    background: #38bdf8;
-    border: 1px solid #0284c7;
-  }
-  .cut-start,
-  .cut-embedded {
-    background: #10b981;
-    border: 1px solid #059669;
-  }
-  .cut-manual {
-    background: #f59e0b;
-    border: 1px solid #d97706;
-  }
-  body.hide-cut-dots .cut-dot {
-    display: none;
-  }
-  .card-badge {
-    font-family: Menlo, monospace;
-    font-size: 10.5px;
-    font-weight: 700;
-    color: var(--accent);
-    flex-shrink: 0;
-  }
-  .card-title-input {
-    background: transparent;
-    border: 1px solid transparent;
-    color: var(--text);
-    font-size: 11.5px;
-    font-weight: 600;
-    width: 100%;
-    min-width: 0;
-    border-radius: 4px;
-    padding: 1px 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .card-title-input:hover, .card-title-input:focus {
-    border-color: var(--border);
-    background: var(--bg);
-    outline: none;
-  }
-  .card-meta {
-    font-family: Menlo, monospace;
-    font-size: 10px;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
-  .card-del {
-    padding: 0 5px;
-    font-size: 11px;
-    line-height: 1.3;
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid transparent;
-  }
-  .card-del:hover {
-    background: var(--danger);
-    border-color: var(--danger);
-    color: #fff;
-  }
-
-  .contact-grid {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 1.5px;
-    padding: 1.5px;
-  }
-  .grid-cell {
-    position: relative;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
-    background-color: #050608;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: border-color 0.1s ease;
-  }
-  .grid-cell:hover {
-    border-color: var(--accent);
-  }
-  .grid-cell video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 1;
-    pointer-events: none;
-  }
-  .cell-time {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    z-index: 2;
-    padding: 1px 3px;
-    font-family: Menlo, Monaco, monospace;
-    font-size: 9px;
-    font-weight: 600;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.72);
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
-    line-height: 1.2;
-  }
-
-  .gallery.list-view {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .gallery.list-view .card {
-    flex-direction: row;
-    align-items: stretch;
-  }
-  .gallery.list-view .card-header {
-    width: 195px;
-    flex-shrink: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 4px;
-    border-bottom: none;
-    border-right: 1px solid var(--border);
-    padding: 8px 10px;
-  }
-  .gallery.list-view .card-header-left,
-  .gallery.list-view .card-header-right {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .gallery.list-view .contact-grid {
-    flex: 1;
-    height: auto;
-    aspect-ratio: 144 / 9;
-    grid-template-columns: repeat(9, 1fr);
-    grid-template-rows: 1fr;
-  }
-
-  .player-shell {
-    position: fixed;
-    left: var(--win-x, 120px);
-    top: var(--win-y, 80px);
-    width: var(--win-w, min(720px, 90vw));
-    z-index: 80;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 9px;
-    background: var(--panel);
-    color: var(--text);
-    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.88);
-    overflow: visible;
-    touch-action: none;
-    user-select: none;
-  }
-  .popover-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 7px 11px;
-    background: #0e1017;
-    border-bottom: 1px solid var(--border);
-    border-radius: 8px 8px 0 0;
-    cursor: grab;
-  }
-  .popover-header:active {
-    cursor: grabbing;
-  }
-  .popover-meta {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    min-width: 0;
-  }
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-weight: 700;
-    font-size: 11px;
-    background: var(--accent);
-    color: #fff;
-    font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
-  }
-  .popover-title {
-    font-size: 12.5px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .popover-range {
-    font-size: 11px;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
-  }
-  .player-stage {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    border-radius: 0 0 8px 8px;
-    overflow: hidden;
-  }
-  .video-js {
-    width: 100% !important;
-    height: 100% !important;
-  }
-  .vjs-sprite-tooltip {
-    position: absolute;
-    bottom: 18px;
-    transform: translateX(-50%);
-    width: 176px;
-    height: 99px;
-    border-radius: 5px;
-    border: 1.5px solid rgba(255, 255, 255, 0.85);
-    background-color: #000;
-    background-repeat: no-repeat;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
-    pointer-events: none;
-    display: none;
-    z-index: 20;
-  }
-  .vjs-progress-control:hover .vjs-sprite-tooltip {
-    display: block;
-  }
-  .vjs-chapter-marker {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: rgba(255, 255, 255, 0.55);
-    pointer-events: none;
-    z-index: 5;
-  }
-
-  #export-popover,
-  #settings-popover,
-  #manual-export-popover {
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    background: var(--panel);
-    color: var(--text);
-    padding: 0;
-    width: min(88vw, 680px);
-    margin: auto;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
-    overflow: hidden;
-  }
-  #settings-popover {
-    width: min(88vw, 420px);
-  }
-  #manual-export-popover {
-    width: min(94vw, 860px);
-  }
-  #export-popover::backdrop,
-  #settings-popover::backdrop,
-  #manual-export-popover::backdrop {
-    background: rgba(0, 0, 0, 0.78);
-    backdrop-filter: blur(4px);
-  }
-  .settings-modal-body {
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .pref-toggle-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    user-select: none;
-  }
-  .pref-toggle-row input[type="checkbox"] {
-    accent-color: var(--accent);
-    width: 15px;
-    height: 15px;
-    cursor: pointer;
-  }
-  .cut-legend {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 10px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 11.5px;
-    color: var(--muted);
-  }
-  .cut-legend-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .trim-modal-body {
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-height: 84vh;
-    overflow-y: auto;
-  }
-  .trim-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  .trim-col {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: var(--panel-alt);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 10px;
-  }
-  .trim-col-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .trim-col-sub {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--muted);
-  }
-  .trim-cand-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-    gap: 7px;
-  }
-  .trim-cand-card {
-    background: var(--bg);
-    border: 1.5px solid var(--border);
-    border-radius: 5px;
-    overflow: hidden;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-    padding: 0;
-    transition: border-color 0.12s ease;
-  }
-  .trim-cand-card:hover,
-  .trim-cand-card.selected {
-    border-color: var(--accent);
-    background: #141926;
-  }
-  .trim-cand-thumb {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background-color: #050608;
-    background-repeat: no-repeat;
-    overflow: hidden;
-  }
-  .trim-cand-thumb video,
-  .trim-preview-thumb video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    pointer-events: none;
-  }
-  .trim-cand-delta {
-    position: absolute;
-    right: 3px;
-    bottom: 3px;
-    padding: 1px 4px;
-    border-radius: 3px;
-    background: rgba(0, 0, 0, 0.78);
-    color: #fff;
-    font-family: Menlo, monospace;
-    font-size: 9.5px;
-    font-weight: 600;
-  }
-  .trim-cand-meta {
-    padding: 4px 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .trim-cand-row {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .trim-cand-ts {
-    font-family: Menlo, monospace;
-    font-weight: 700;
-    color: var(--text);
-    font-size: 10.5px;
-  }
-  .trim-cand-label {
-    font-size: 9.5px;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .trim-fine-box {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border);
-  }
-  .trim-preview-thumb {
-    width: 112px;
-    aspect-ratio: 16 / 9;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background-color: #050608;
-    background-repeat: no-repeat;
-    flex-shrink: 0;
-    position: relative;
-    overflow: hidden;
-  }
-  .trim-fine-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-    min-width: 0;
-  }
-  .trim-time-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .trim-time-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    width: 38px;
-    flex-shrink: 0;
-  }
-  .trim-time-input {
-    flex: 1;
-    min-width: 118px;
-    font-family: Menlo, Monaco, monospace;
-    font-size: 12px;
-    font-weight: 600;
-    text-align: center;
-    padding: 5px 8px;
-  }
-  .trim-nudge-btns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .trim-nudge-btns button {
-    padding: 3px 7px;
-    font-size: 10.5px;
-    flex: 1;
-    text-align: center;
-  }
-  .trim-footer {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: var(--panel-alt);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 12px 14px;
-  }
-  .trim-footer-inputs {
-    display: grid;
-    grid-template-columns: 1fr 220px;
-    gap: 12px;
-    align-items: end;
-  }
-  .trim-field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-  }
-  .trim-field.disabled {
-    opacity: 0.45;
-  }
-  .trim-field-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--muted);
-  }
-  .trim-path-input {
-    width: 100%;
-    font-family: Menlo, Monaco, monospace;
-    font-size: 11.5px;
-    padding: 6px 10px;
-  }
-  .trim-title-input {
-    width: 100%;
-    font-size: 12px;
-    padding: 6px 10px;
-  }
-  .trim-footer-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding-top: 4px;
-    border-top: 1px solid var(--border);
-  }
-  .trim-footer-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .export-textarea {
-    width: 100%;
-    height: 300px;
-    background: #08090d;
-    color: var(--text);
-    border: none;
-    padding: 12px;
-    font-family: Menlo, Monaco, monospace;
-    font-size: 11.5px;
-    resize: vertical;
-    outline: none;
-  }
-
-  @media (max-width: 768px) {
-    .gallery {
-      grid-template-columns: 1fr;
-    }
-    .gallery.list-view .card {
-      flex-direction: column;
-    }
-    .gallery.list-view .card-header {
-      width: 100%;
-      flex-direction: row;
-      border-right: none;
-      border-bottom: 1px solid var(--border);
-    }
-    .gallery.list-view .contact-grid {
-      aspect-ratio: 16 / 9;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-    }
-    .phase-row {
-      grid-template-columns: 1fr 60px;
-    }
-    .phase-bar-bg, .phase-info {
-      grid-column: 1 / -1;
-    }
-    .trim-columns,
-    .trim-footer-inputs {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
+<link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet" />
 </head>
-<body>
+<body class="bg-base-100 text-base-content min-h-screen">
 
-<main id="picker-view">
-  <section class="picker-card">
-    <div class="picker-header">
-      <span class="picker-title">RapidVideoChapterGenerator</span>
-      <div class="toolbar-right">
-        <button type="button" id="resume-browser-btn" class="hidden">Return to Scene Browser →</button>
-        <button type="button" class="open-settings-btn">⚙ Settings</button>
-      </div>
-    </div>
-    <div class="path-row">
-      <button type="button" id="up-dir-btn">↑ Parent</button>
-      <input id="dir-input" class="text-input flex-1" placeholder="Directory or paste/drop video file path..." />
-      <button type="button" id="go-path-btn" class="primary">Open</button>
-    </div>
-    <div id="file-grid" class="file-grid"></div>
-    <div class="settings-panel">
-      <div class="settings-row">
-        <label class="field-group" data-tippy-content="Predefined pipeline profile (default, black-fades, podcast, presentation, action) that configures stages and thresholds.">Preset
-          <select id="preset-select">
-            <option value="default">default</option>
-            <option value="black-fades">black-fades</option>
-            <option value="podcast">podcast</option>
-            <option value="presentation">presentation</option>
-            <option value="action">action</option>
-          </select>
-        </label>
-        <label class="field-group" data-tippy-content="Minimum allowed chapter duration in seconds across all stages. Suppresses cuts closer than this gap and merges short trailing segments.">Min Scene (s)
-          <input id="cfg-min" class="text-input" type="number" step="10" />
-        </label>
-        <label class="field-group" data-tippy-content="Parallel FFmpeg worker count (1–16) used during keyframe visual scanning.">Workers
-          <input id="cfg-workers" class="text-input" type="number" step="1" min="1" max="16" />
-        </label>
-      </div>
-      <div class="pipeline-grid">
-        <div id="stage-black" class="stage-card" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black transitions.">
-          <div class="stage-head">
-            <label class="stage-toggle">
-              <input id="cfg-enable-black" type="checkbox" checked /> 1. Black Fades
-            </label>
-            <span id="stat-black" class="stage-stat"></span>
-          </div>
-          <div class="stage-fields">
-            <label class="field-group" data-tippy-content="Minimum fade-to-black duration in seconds required to register a black-fade cut.">Min Fade (s)
-              <input id="cfg-black-dur" class="text-input" type="number" step="0.1" min="0.1" max="5.0" />
-            </label>
-          </div>
+<main id="picker-view" class="max-w-6xl mx-auto p-4 md:p-6 flex flex-col gap-6">
+  <section class="card bg-base-200 border border-base-content/10 shadow-md">
+    <div class="card-body p-4 md:p-6 flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <span class="text-xl font-bold tracking-tight">RapidVideoChapterGenerator</span>
+        <div class="flex items-center gap-2">
+          <button type="button" id="resume-browser-btn" class="btn btn-outline btn-sm hidden">Return to Scene Browser →</button>
+          <button type="button" class="open-settings-btn btn btn-ghost btn-sm">⚙ Settings</button>
         </div>
-        <div id="stage-visual" class="stage-card" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
-          <div class="stage-head">
-            <label class="stage-toggle">
-              <input id="cfg-enable-visual" type="checkbox" checked /> 2. Visual Cuts
-            </label>
-            <span id="stat-visual" class="stage-stat"></span>
-          </div>
-          <div class="stage-fields">
-            <label class="field-group" data-tippy-content="Visual cut sensitivity (0.05–0.95). Lower values detect subtler changes; higher values require sharper transitions.">Threshold
-              <input id="cfg-th" class="text-input" type="number" step="0.02" min="0.05" max="0.95" />
-            </label>
-          </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button type="button" id="up-dir-btn" class="btn btn-outline btn-sm">↑ Parent</button>
+        <input id="dir-input" class="input input-bordered input-sm flex-1 font-mono text-xs" placeholder="Directory or paste/drop video file path..." />
+        <button type="button" id="go-path-btn" class="btn btn-primary btn-sm">Open</button>
+      </div>
+
+      <div id="file-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-72 overflow-y-auto p-1 bg-base-300/40 rounded-box border border-base-content/5"></div>
+
+      <div class="flex flex-col gap-4 pt-2 border-t border-base-content/10">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <fieldset class="fieldset" data-tippy-content="Predefined pipeline profile (default, black-fades, podcast, presentation, action) that configures stages and thresholds.">
+            <legend class="fieldset-legend text-xs">Preset</legend>
+            <select id="preset-select" class="select select-bordered select-sm w-full">
+              <option value="default">default</option>
+              <option value="black-fades">black-fades</option>
+              <option value="podcast">podcast</option>
+              <option value="presentation">presentation</option>
+              <option value="action">action</option>
+            </select>
+          </fieldset>
+
+          <fieldset class="fieldset" data-tippy-content="Minimum allowed chapter duration in seconds across all stages. Suppresses cuts closer than this gap and merges short trailing segments.">
+            <legend class="fieldset-legend text-xs">Min Scene (s)</legend>
+            <input id="cfg-min" class="input input-bordered input-sm w-full" type="number" step="10" />
+          </fieldset>
+
+          <fieldset class="fieldset" data-tippy-content="Parallel FFmpeg worker count (1–16) used during keyframe visual scanning.">
+            <legend class="fieldset-legend text-xs">Workers</legend>
+            <input id="cfg-workers" class="input input-bordered input-sm w-full" type="number" step="1" min="1" max="16" />
+          </fieldset>
         </div>
-        <div id="stage-subdivide" class="stage-card" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
-          <div class="stage-head">
-            <label class="stage-toggle">
-              <input id="cfg-enable-sub" type="checkbox" checked /> 3. Subdivide Long
-            </label>
-            <span id="stat-sub" class="stage-stat"></span>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black transitions.">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                <input id="cfg-enable-black" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
+                <span>1. Black Fades</span>
+              </label>
+              <span id="stat-black" class="text-xs text-base-content/60 font-mono"></span>
+            </div>
+            <fieldset class="fieldset" data-tippy-content="Minimum fade-to-black duration in seconds required to register a black-fade cut.">
+              <legend class="fieldset-legend text-[11px]">Min Fade (s)</legend>
+              <input id="cfg-black-dur" class="input input-bordered input-xs w-full" type="number" step="0.1" min="0.1" max="5.0" />
+            </fieldset>
           </div>
-          <div class="stage-fields">
-            <label class="field-group" data-tippy-content="Maximum chapter duration in seconds before automatic subdivision is triggered.">Max (s)
-              <input id="cfg-max" class="text-input" type="number" step="10" />
-            </label>
-            <label class="field-group" data-tippy-content="Target chapter length in seconds when subdividing chapters longer than Max (s).">Target (s)
-              <input id="cfg-target" class="text-input" type="number" step="10" />
-            </label>
+
+          <div id="stage-visual" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                <input id="cfg-enable-visual" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
+                <span>2. Visual Cuts</span>
+              </label>
+              <span id="stat-visual" class="text-xs text-base-content/60 font-mono"></span>
+            </div>
+            <fieldset class="fieldset" data-tippy-content="Visual cut sensitivity (0.05–0.95). Lower values detect subtler changes; higher values require sharper transitions.">
+              <legend class="fieldset-legend text-[11px]">Threshold</legend>
+              <input id="cfg-th" class="input input-bordered input-xs w-full" type="number" step="0.02" min="0.05" max="0.95" />
+            </fieldset>
+          </div>
+
+          <div id="stage-subdivide" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                <input id="cfg-enable-sub" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
+                <span>3. Subdivide Long</span>
+              </label>
+              <span id="stat-sub" class="text-xs text-base-content/60 font-mono"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <fieldset class="fieldset" data-tippy-content="Maximum chapter duration in seconds before automatic subdivision is triggered.">
+                <legend class="fieldset-legend text-[11px]">Max (s)</legend>
+                <input id="cfg-max" class="input input-bordered input-xs w-full" type="number" step="10" />
+              </fieldset>
+              <fieldset class="fieldset" data-tippy-content="Target chapter length in seconds when subdividing chapters longer than Max (s).">
+                <legend class="fieldset-legend text-[11px]">Target (s)</legend>
+                <input id="cfg-target" class="input input-bordered input-xs w-full" type="number" step="10" />
+              </fieldset>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <details id="progress-box" class="progress-box hidden" open>
-    <summary class="progress-summary-bar">
+  <div id="progress-box" class="collapse collapse-arrow bg-base-200 border border-base-content/10 shadow-md hidden">
+    <input type="checkbox" checked />
+    <div class="collapse-title flex items-center justify-between pr-10 text-sm font-semibold">
       <span id="progress-title">Scan Diagnostics</span>
-      <span id="progress-summary" class="progress-summary-meta"></span>
-    </summary>
-    <div class="progress-body">
-      <div class="phase-row"><span>[1/5] Embedded chapter check</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-1"></div></div><span id="p-pct-1">0%</span><span class="phase-info" id="p-info-1">waiting...</span></div>
-      <div class="phase-row"><span>[2/5] Keyframe visual scan</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-2"></div></div><span id="p-pct-2">0%</span><span class="phase-info" id="p-info-2">waiting...</span></div>
-      <div class="phase-row"><span>[3/5] Priority anchor placement</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-3"></div></div><span id="p-pct-3">0%</span><span class="phase-info" id="p-info-3">waiting...</span></div>
-      <div class="phase-row"><span>[4/5] Long-segment subdivision</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-4"></div></div><span id="p-pct-4">0%</span><span class="phase-info" id="p-info-4">waiting...</span></div>
-      <div class="phase-row"><span>[5/5] Tail merge & cell sampling</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-5"></div></div><span id="p-pct-5">0%</span><span class="phase-info" id="p-info-5">waiting...</span></div>
-      <div class="phase-row"><span>      Timeline sprite sheet</span><div class="phase-bar-bg"><div class="phase-bar-fill" id="p-fill-spr"></div></div><span id="p-pct-spr">0%</span><span class="phase-info" id="p-info-spr">rendering...</span></div>
-      <textarea id="scan-log" class="scan-log" readonly spellcheck="false" placeholder="Scan diagnostic log..."></textarea>
+      <span id="progress-summary" class="text-xs text-base-content/60 font-mono font-normal"></span>
     </div>
-  </details>
+    <div class="collapse-content flex flex-col gap-2 text-xs">
+      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[1/5] Embedded chapter check</span><progress class="progress progress-primary w-full" id="p-fill-1" value="0" max="100"></progress><span id="p-pct-1" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-1">waiting...</span></div>
+      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[2/5] Keyframe visual scan</span><progress class="progress progress-primary w-full" id="p-fill-2" value="0" max="100"></progress><span id="p-pct-2" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-2">waiting...</span></div>
+      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[3/5] Priority anchor placement</span><progress class="progress progress-primary w-full" id="p-fill-3" value="0" max="100"></progress><span id="p-pct-3" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-3">waiting...</span></div>
+      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[4/5] Long-segment subdivision</span><progress class="progress progress-primary w-full" id="p-fill-4" value="0" max="100"></progress><span id="p-pct-4" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-4">waiting...</span></div>
+      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[5/5] Tail merge & cell sampling</span><progress class="progress progress-primary w-full" id="p-fill-5" value="0" max="100"></progress><span id="p-pct-5" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-5">waiting...</span></div>
+      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Timeline sprite sheet</span><progress class="progress progress-secondary w-full" id="p-fill-spr" value="0" max="100"></progress><span id="p-pct-spr" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-spr">rendering...</span></div>
+      <textarea id="scan-log" class="textarea textarea-bordered font-mono text-[11px] h-28 resize-y mt-2" readonly spellcheck="false" placeholder="Scan diagnostic log..."></textarea>
+    </div>
+  </div>
 </main>
 
-<main id="browser-view" class="hidden">
-  <header class="toolbar">
-    <div class="toolbar-left">
-      <button type="button" id="switch-video-btn">← Videos</button>
-      <div class="brand" id="brand-title"></div>
-      <span id="count-label" class="count-label"></span>
-      <span id="status-pill" class="status-pill"></span>
-      <button type="button" id="reveal-file-btn" class="reveal-icon-btn hidden"><i class="ph ph-folder-open"></i></button>
+<main id="browser-view" class="flex flex-col min-h-screen hidden">
+  <header class="navbar bg-base-200 border-b border-base-content/10 px-4 py-2 sticky top-0 z-20 flex justify-between gap-2 shadow-sm">
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <button type="button" id="switch-video-btn" class="btn btn-outline btn-sm">← Videos</button>
+      <div class="font-bold text-sm truncate max-w-xs md:max-w-md" id="brand-title"></div>
+      <span id="count-label" class="badge badge-ghost badge-sm font-mono hidden sm:inline-flex"></span>
+      <span id="status-pill" class="badge badge-neutral badge-sm"></span>
+      <button type="button" id="reveal-file-btn" class="btn btn-ghost btn-xs btn-circle text-primary hidden"><i class="ph ph-folder-open text-base"></i></button>
     </div>
-    <div class="toolbar-right">
-      <input id="search-input" class="search-input" type="search" placeholder="Search chapter or timestamp..." />
-      <button type="button" id="redetect-btn">↻ Re-Detect</button>
-      <button type="button" id="save-chapters-btn" class="primary">Embed Chapters</button>
-      <div class="menu-wrap">
-        <button type="button" id="export-menu-btn">Export ▾</button>
-        <div id="export-dropdown" class="dropdown-menu hidden">
-          <button type="button" data-fmt="youtube">YouTube Timestamps</button>
-          <button type="button" data-fmt="json">JSON</button>
-          <button type="button" data-fmt="csv">CSV</button>
-          <button type="button" data-fmt="ffmetadata">FFMETADATA</button>
-        </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <input id="search-input" class="input input-bordered input-sm w-36 sm:w-56" type="search" placeholder="Search chapter..." />
+      <button type="button" id="redetect-btn" class="btn btn-outline btn-sm">↻ Re-Detect</button>
+      <button type="button" id="save-chapters-btn" class="btn btn-primary btn-sm">Embed Chapters</button>
+      <div class="relative">
+        <button type="button" id="export-menu-btn" class="btn btn-outline btn-sm">Export ▾</button>
+        <ul id="export-dropdown" class="menu bg-base-200 border border-base-content/10 rounded-box shadow-xl absolute right-0 top-full mt-1 w-48 z-30 hidden p-1">
+          <li><button type="button" data-fmt="youtube">YouTube Timestamps</button></li>
+          <li><button type="button" data-fmt="json">JSON</button></li>
+          <li><button type="button" data-fmt="csv">CSV</button></li>
+          <li><button type="button" data-fmt="ffmetadata">FFMETADATA</button></li>
+        </ul>
       </div>
-      <button type="button" class="view-btn active" data-view="grid">Grid</button>
-      <button type="button" class="view-btn" data-view="list">List</button>
-      <button type="button" class="open-settings-btn">⚙ Settings</button>
+      <div class="join hidden sm:inline-flex">
+        <button type="button" class="view-btn btn btn-sm join-item btn-active" data-view="grid">Grid</button>
+        <button type="button" class="view-btn btn btn-sm join-item" data-view="list">List</button>
+      </div>
+      <button type="button" class="open-settings-btn btn btn-ghost btn-sm">⚙ Settings</button>
     </div>
   </header>
 
-  <section id="gallery" class="gallery"></section>
+  <section id="gallery" class="gallery grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 flex-1"></section>
 </main>
 
-<div id="player-shell" class="player-shell hidden">
-  <div class="popover-header">
-    <div class="popover-meta">
-      <span id="now-badge" class="badge"></span>
-      <span id="now-title" class="popover-title"></span>
-      <span id="now-range" class="popover-range"></span>
+<div id="player-shell" class="player-shell fixed z-50 bg-base-300 border border-base-content/20 rounded-box shadow-2xl flex flex-col overflow-hidden hidden">
+  <div class="flex items-center justify-between px-3 py-2 bg-base-200 border-b border-base-content/10 cursor-move select-none">
+    <div class="flex items-center gap-2 min-w-0 mr-2">
+      <span id="now-badge" class="badge badge-primary badge-sm font-mono shrink-0"></span>
+      <span id="now-title" class="font-semibold text-xs truncate"></span>
+      <span id="now-range" class="text-xs text-base-content/60 font-mono truncate hidden sm:inline"></span>
     </div>
-    <div class="toolbar-right">
-      <button id="split-here-btn" class="primary" type="button">✂ Split Scene</button>
-      <div class="menu-wrap">
-        <button id="export-scene-btn" type="button">⬇ Export Scene ▾</button>
-        <div id="export-scene-dropdown" class="dropdown-menu hidden">
-          <button type="button" data-export-mode="chapter">Export Entire Chapter</button>
-          <button type="button" data-export-mode="nearest">Export Nearest Scene</button>
-          <button type="button" data-export-mode="manual">Export Manually...</button>
-        </div>
+    <div class="flex items-center gap-1 shrink-0">
+      <button id="split-here-btn" class="btn btn-primary btn-xs" type="button">✂ Split Scene</button>
+      <div class="relative">
+        <button id="export-scene-btn" class="btn btn-outline btn-xs" type="button">⬇ Export Scene ▾</button>
+        <ul id="export-scene-dropdown" class="menu bg-base-200 border border-base-content/10 rounded-box shadow-xl absolute right-0 top-full mt-1 w-48 z-30 hidden p-1">
+          <li><button type="button" data-export-mode="chapter">Export Entire Chapter</button></li>
+          <li><button type="button" data-export-mode="nearest">Export Nearest Scene</button></li>
+          <li><button type="button" data-export-mode="manual">Export Manually...</button></li>
+        </ul>
       </div>
-      <button id="close-player-btn" type="button">✕</button>
+      <button id="close-player-btn" class="btn btn-ghost btn-xs btn-circle" type="button">✕</button>
     </div>
   </div>
-  <div class="player-stage">
-    <video id="vjs-player" class="video-js vjs-big-play-centered" controls playsinline preload="metadata"></video>
+  <div class="relative w-full aspect-video bg-black flex-1">
+    <video id="vjs-player" class="video-js vjs-big-play-centered w-full h-full" controls playsinline preload="metadata"></video>
   </div>
 </div>
 
-<dialog id="export-popover">
-  <div class="popover-header">
-    <span id="export-title" class="popover-title">Export Chapters</span>
-    <div class="toolbar-right">
-      <button id="copy-export-btn" class="primary" type="button">Copy</button>
-      <button id="close-export" type="button">✕</button>
+<dialog id="export-popover" class="modal">
+  <div class="modal-box max-w-2xl">
+    <div class="flex items-center justify-between border-b border-base-content/10 pb-3 mb-3">
+      <h3 id="export-title" class="font-bold text-base">Export Chapters</h3>
+      <div class="flex items-center gap-2">
+        <button id="copy-export-btn" class="btn btn-primary btn-sm" type="button">Copy</button>
+        <button id="close-export" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
+      </div>
     </div>
+    <textarea id="export-textarea" class="textarea textarea-bordered font-mono text-xs w-full h-72 resize-y" readonly></textarea>
   </div>
-  <textarea id="export-textarea" class="export-textarea" readonly></textarea>
 </dialog>
 
-<dialog id="manual-export-popover">
-  <div class="popover-header">
-    <span class="popover-title">Export Scene Manually — Trim Assistant</span>
-    <div class="toolbar-right">
-      <span id="manual-playhead-label" class="popover-range"></span>
-      <button id="close-manual-export" type="button">✕</button>
+<dialog id="manual-export-popover" class="modal">
+  <div class="modal-box max-w-4xl p-4 md:p-6 flex flex-col gap-4">
+    <div class="flex items-center justify-between border-b border-base-content/10 pb-3">
+      <h3 class="font-bold text-base">Export Scene Manually — Trim Assistant</h3>
+      <div class="flex items-center gap-3">
+        <span id="manual-playhead-label" class="badge badge-neutral font-mono text-xs"></span>
+        <button id="close-manual-export" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
+      </div>
     </div>
-  </div>
-  <div class="trim-modal-body">
-    <div class="trim-columns">
-      <div class="trim-col">
-        <div class="trim-col-head">
-          <span>Suggested Start Points</span>
-          <span class="trim-col-sub">Before playhead</span>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box border border-base-content/10">
+        <div class="flex items-center justify-between">
+          <span class="font-semibold text-xs">Suggested Start Points</span>
+          <span class="text-[11px] text-base-content/60">Before playhead</span>
         </div>
-        <div id="manual-start-cands" class="trim-cand-grid"></div>
-        <div class="trim-fine-box">
-          <div id="manual-start-thumb" class="trim-preview-thumb"></div>
-          <div class="trim-fine-controls">
-            <div class="trim-time-row">
-              <span class="trim-time-label">Start</span>
-              <input id="manual-start-input" class="text-input trim-time-input" placeholder="00:00:00.000" />
-              <button type="button" id="manual-start-playhead-btn">Use Playhead</button>
+        <div id="manual-start-cands" class="grid grid-cols-3 gap-1.5 min-h-[140px]"></div>
+        <div class="flex gap-2 items-center pt-2 border-t border-base-content/10">
+          <div id="manual-start-thumb" class="relative aspect-video w-28 rounded bg-base-300 overflow-hidden shrink-0 bg-no-repeat"></div>
+          <div class="flex flex-col gap-1.5 flex-1">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold w-9">Start</span>
+              <input id="manual-start-input" class="input input-bordered input-xs flex-1 font-mono" placeholder="00:00:00.000" />
+              <button type="button" id="manual-start-playhead-btn" class="btn btn-outline btn-xs">Use Playhead</button>
             </div>
-            <div class="trim-nudge-btns">
-              <button type="button" data-nudge-start="-5">-5s</button>
-              <button type="button" data-nudge-start="-1">-1s</button>
-              <button type="button" data-nudge-start="-0.1">-0.1s</button>
-              <button type="button" data-nudge-start="0.1">+0.1s</button>
-              <button type="button" data-nudge-start="1">+1s</button>
-              <button type="button" data-nudge-start="5">+5s</button>
+            <div class="flex flex-wrap gap-1">
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="-5">-5s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="-1">-1s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="-0.1">-0.1s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="0.1">+0.1s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="1">+1s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-start="5">+5s</button>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="trim-col">
-        <div class="trim-col-head">
-          <span>Suggested End Points</span>
-          <span class="trim-col-sub">After playhead</span>
+      <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box border border-base-content/10">
+        <div class="flex items-center justify-between">
+          <span class="font-semibold text-xs">Suggested End Points</span>
+          <span class="text-[11px] text-base-content/60">After playhead</span>
         </div>
-        <div id="manual-end-cands" class="trim-cand-grid"></div>
-        <div class="trim-fine-box">
-          <div id="manual-end-thumb" class="trim-preview-thumb"></div>
-          <div class="trim-fine-controls">
-            <div class="trim-time-row">
-              <span class="trim-time-label">End</span>
-              <input id="manual-end-input" class="text-input trim-time-input" placeholder="00:00:00.000" />
-              <button type="button" id="manual-end-playhead-btn">Use Playhead</button>
+        <div id="manual-end-cands" class="grid grid-cols-3 gap-1.5 min-h-[140px]"></div>
+        <div class="flex gap-2 items-center pt-2 border-t border-base-content/10">
+          <div id="manual-end-thumb" class="relative aspect-video w-28 rounded bg-base-300 overflow-hidden shrink-0 bg-no-repeat"></div>
+          <div class="flex flex-col gap-1.5 flex-1">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold w-9">End</span>
+              <input id="manual-end-input" class="input input-bordered input-xs flex-1 font-mono" placeholder="00:00:00.000" />
+              <button type="button" id="manual-end-playhead-btn" class="btn btn-outline btn-xs">Use Playhead</button>
             </div>
-            <div class="trim-nudge-btns">
-              <button type="button" data-nudge-end="-5">-5s</button>
-              <button type="button" data-nudge-end="-1">-1s</button>
-              <button type="button" data-nudge-end="-0.1">-0.1s</button>
-              <button type="button" data-nudge-end="0.1">+0.1s</button>
-              <button type="button" data-nudge-end="1">+1s</button>
-              <button type="button" data-nudge-end="5">+5s</button>
+            <div class="flex flex-wrap gap-1">
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="-5">-5s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="-1">-1s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="-0.1">-0.1s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="0.1">+0.1s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="1">+1s</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-nudge-end="5">+5s</button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="trim-footer">
-      <div class="trim-footer-inputs">
-        <label class="trim-field">
-          <span class="trim-field-label">Output File Path</span>
-          <input id="manual-path-input" class="text-input trim-path-input" spellcheck="false" />
-        </label>
-        <label id="manual-title-field" class="trim-field">
-          <span class="trim-field-label">Intro Title</span>
-          <input id="manual-title-input" class="text-input trim-title-input" />
-        </label>
+    <div class="flex flex-col gap-3 pt-3 border-t border-base-content/10">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend text-xs">Output File Path</legend>
+          <input id="manual-path-input" class="input input-bordered input-sm w-full font-mono text-xs" spellcheck="false" />
+        </fieldset>
+        <fieldset id="manual-title-field" class="fieldset">
+          <legend class="fieldset-legend text-xs">Intro Title</legend>
+          <input id="manual-title-input" class="input input-bordered input-sm w-full" />
+        </fieldset>
       </div>
-      <div class="trim-footer-actions">
-        <div class="trim-footer-left">
-          <span id="manual-dur-label" class="count-label"></span>
-          <label class="pref-toggle-row">
-            <input id="manual-include-intro" type="checkbox" checked />
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-4">
+          <span id="manual-dur-label" class="badge badge-neutral font-mono text-xs"></span>
+          <label class="flex items-center gap-2 text-xs cursor-pointer">
+            <input id="manual-include-intro" type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked />
             <span>Include 3×3 intro card</span>
           </label>
         </div>
-        <div class="toolbar-right">
-          <button id="manual-preview-btn" type="button">▶ Preview Start in Player</button>
-          <button id="run-manual-export-btn" class="primary" type="button">⬇ Export Trim</button>
+        <div class="flex items-center gap-2">
+          <button id="manual-preview-btn" class="btn btn-outline btn-sm" type="button">▶ Preview Start in Player</button>
+          <button id="run-manual-export-btn" class="btn btn-primary btn-sm" type="button">⬇ Export Trim</button>
         </div>
       </div>
     </div>
   </div>
 </dialog>
 
-<dialog id="settings-popover">
-  <div class="popover-header">
-    <span class="popover-title">Settings</span>
-    <div class="toolbar-right">
-      <button id="close-settings" type="button">✕</button>
+<dialog id="settings-popover" class="modal">
+  <div class="modal-box max-w-md flex flex-col gap-4">
+    <div class="flex items-center justify-between border-b border-base-content/10 pb-3">
+      <h3 class="font-bold text-base">Settings</h3>
+      <button id="close-settings" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
     </div>
-  </div>
-  <div class="settings-modal-body">
-    <label class="pref-toggle-row">
-      <input id="pref-show-cut-dot" type="checkbox" checked />
-      <span>Show cut origin indicator on scene cards</span>
-    </label>
-    <div class="cut-legend">
-      <div class="cut-legend-row"><span class="cut-dot cut-black"></span><span>Gray — Black fade transition (Stage 1)</span></div>
-      <div class="cut-legend-row"><span class="cut-dot cut-visual"></span><span>White — Visual scene transition (Stage 2)</span></div>
-      <div class="cut-legend-row"><span class="cut-dot cut-subdiv"></span><span>Blue — Long-segment subdivision (Stage 3)</span></div>
-      <div class="cut-legend-row"><span class="cut-dot cut-start"></span><span>Emerald — Video start or embedded chapter</span></div>
-      <div class="cut-legend-row"><span class="cut-dot cut-manual"></span><span>Amber — Manual split</span></div>
+    <div class="flex flex-col gap-4">
+      <label class="flex items-center gap-3 text-sm cursor-pointer">
+        <input id="pref-show-cut-dot" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
+        <span>Show cut origin indicator on scene cards</span>
+      </label>
+      <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box text-xs border border-base-content/10">
+        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content/40"></span><span>Gray — Black fade transition (Stage 1)</span></div>
+        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content"></span><span>White — Visual scene transition (Stage 2)</span></div>
+        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-info"></span><span>Blue — Long-segment subdivision (Stage 3)</span></div>
+        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-success"></span><span>Emerald — Video start or embedded chapter</span></div>
+        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-warning"></span><span>Amber — Manual split</span></div>
+      </div>
     </div>
   </div>
 </dialog>
@@ -1320,1462 +315,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy-bundle.umd.min.js"></script>
 <script>
-const DEFAULT_CFG = __DEFAULT_CFG__;
-let currentDir = __INIT_DIR__;
-let currentVideoPath = __INIT_VID__;
-let VIDEO_SRC = "";
-let SPRITE = { url: "", interval: 10, cols: 10, rows: 1, total_frames: 1 };
-let CUTS = [];
-let RAW_CANDIDATES = [];
-let SUBTITLES = [];
-let currentIndex = -1;
-let searchQuery = "";
-let sourceLoaded = false;
-
-const pickerView = document.getElementById("picker-view");
-const browserView = document.getElementById("browser-view");
-const resumeBrowserBtn = document.getElementById("resume-browser-btn");
-const progressBox = document.getElementById("progress-box");
-const fileGrid = document.getElementById("file-grid");
-const dirInput = document.getElementById("dir-input");
-const brandTitle = document.getElementById("brand-title");
-const statusPill = document.getElementById("status-pill");
-const revealFileBtn = document.getElementById("reveal-file-btn");
-const saveChaptersBtn = document.getElementById("save-chapters-btn");
-const gallery = document.getElementById("gallery");
-const countLabel = document.getElementById("count-label");
-const playerShell = document.getElementById("player-shell");
-const exportPopover = document.getElementById("export-popover");
-const exportTextarea = document.getElementById("export-textarea");
-const exportDropdown = document.getElementById("export-dropdown");
-const nowBadge = document.getElementById("now-badge");
-const nowTitle = document.getElementById("now-title");
-const nowRange = document.getElementById("now-range");
-
-const cfgEnableBlack = document.getElementById("cfg-enable-black");
-const cfgBlackDur = document.getElementById("cfg-black-dur");
-const cfgEnableVisual = document.getElementById("cfg-enable-visual");
-const cfgTh = document.getElementById("cfg-th");
-const cfgEnableSub = document.getElementById("cfg-enable-sub");
-const cfgMax = document.getElementById("cfg-max");
-const cfgTarget = document.getElementById("cfg-target");
-
-document.getElementById("cfg-min").value = DEFAULT_CFG.min_seg;
-cfgMax.value = DEFAULT_CFG.max_seg;
-cfgTarget.value = DEFAULT_CFG.target_seg;
-cfgTh.value = DEFAULT_CFG.threshold;
-cfgBlackDur.value = DEFAULT_CFG.black_min_dur ?? 0.4;
-cfgEnableBlack.checked = DEFAULT_CFG.enable_black_fades ?? true;
-cfgEnableVisual.checked = DEFAULT_CFG.enable_visual_cuts ?? true;
-cfgEnableSub.checked = DEFAULT_CFG.enable_subdivide ?? true;
-document.getElementById("cfg-workers").value = DEFAULT_CFG.workers;
-
-function syncStageUI() {
-  const bOn = cfgEnableBlack.checked;
-  const vOn = cfgEnableVisual.checked;
-  const sOn = cfgEnableSub.checked;
-  document.getElementById("stage-black").classList.toggle("disabled", !bOn);
-  cfgBlackDur.disabled = !bOn;
-  document.getElementById("stage-visual").classList.toggle("disabled", !vOn);
-  cfgTh.disabled = !vOn;
-  document.getElementById("stage-subdivide").classList.toggle("disabled", !sOn);
-  cfgMax.disabled = !sOn;
-  cfgTarget.disabled = !sOn;
-}
-
-[cfgEnableBlack, cfgEnableVisual, cfgEnableSub].forEach((el) => {
-  el.addEventListener("change", syncStageUI);
-});
-syncStageUI();
-
-document.getElementById("preset-select").addEventListener("change", (e) => {
-  const p = e.target.value;
-  cfgEnableBlack.checked = true;
-  cfgBlackDur.value = 0.4;
-  if (p === "black-fades") {
-    document.getElementById("cfg-min").value = 180;
-    cfgEnableVisual.checked = false;
-    cfgEnableSub.checked = false;
-  } else if (p === "podcast") {
-    document.getElementById("cfg-min").value = 120;
-    cfgMax.value = 900;
-    cfgTarget.value = 450;
-    cfgTh.value = 0.45;
-    cfgEnableVisual.checked = true;
-    cfgEnableSub.checked = true;
-  } else if (p === "presentation") {
-    document.getElementById("cfg-min").value = 60;
-    cfgMax.value = 600;
-    cfgTarget.value = 300;
-    cfgTh.value = 0.30;
-    cfgEnableVisual.checked = true;
-    cfgEnableSub.checked = true;
-  } else if (p === "action") {
-    document.getElementById("cfg-min").value = 90;
-    cfgMax.value = 420;
-    cfgTarget.value = 240;
-    cfgTh.value = 0.35;
-    cfgEnableVisual.checked = true;
-    cfgEnableSub.checked = true;
-  } else {
-    document.getElementById("cfg-min").value = 180;
-    cfgMax.value = 600;
-    cfgTarget.value = 360;
-    cfgTh.value = 0.38;
-    cfgEnableVisual.checked = true;
-    cfgEnableSub.checked = true;
-  }
-  syncStageUI();
-});
-
-const player = videojs("vjs-player", {
-  controls: true,
-  autoplay: false,
-  preload: "metadata",
-  fluid: false,
-  playbackRates: [0.5, 1, 1.25, 1.5, 2],
-  controlBar: {
-    SkipButtons: { forward: 10, backward: 10 }
-  }
-});
-
-function setStatus(text, isError = false, revealPath = "") {
-  statusPill.textContent = text;
-  statusPill.classList.toggle("error", Boolean(isError));
-  if (revealPath) {
-    revealFileBtn.dataset.revealPath = revealPath;
-    revealFileBtn.classList.remove("hidden");
-    const tipText = `Open file location: ${revealPath}`;
-    revealFileBtn.dataset.tippyContent = tipText;
-    if (revealFileBtn._tippy) {
-      revealFileBtn._tippy.setContent(tipText);
-    } else if (typeof tippy !== "undefined") {
-      tippy(revealFileBtn, {
-        placement: "bottom",
-        delay: [40, 0],
-        maxWidth: 520,
-        appendTo: () => document.body,
-      });
-    }
-  } else {
-    revealFileBtn.dataset.revealPath = "";
-    revealFileBtn.classList.add("hidden");
-  }
-}
-
-revealFileBtn.addEventListener("click", async () => {
-  const target = revealFileBtn.dataset.revealPath;
-  if (!target) return;
-  await fetch("/api/fs/reveal", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path: target }),
-  });
-});
-
-function showView(viewName) {
-  if (viewName === "browser") {
-    pickerView.classList.add("hidden");
-    browserView.classList.remove("hidden");
-    resumeBrowserBtn.classList.remove("hidden");
-  } else {
-    browserView.classList.add("hidden");
-    pickerView.classList.remove("hidden");
-  }
-}
-
-const winState = { x: null, y: null, w: 720 };
-
-function applyPlayerBounds() {
-  const maxW = Math.max(260, window.innerWidth - 20);
-  if (winState.x === null || winState.y === null) {
-    winState.w = Math.min(720, maxW);
-    const initH = winState.w * (9 / 16) + 38;
-    winState.x = Math.max(10, (window.innerWidth - winState.w) / 2);
-    winState.y = Math.max(10, (window.innerHeight - initH) / 2);
-  }
-  winState.w = Math.max(260, Math.min(maxW, winState.w));
-  const h = winState.w * (9 / 16) + 38;
-  winState.x = Math.max(6, Math.min(window.innerWidth - winState.w - 6, winState.x));
-  winState.y = Math.max(6, Math.min(window.innerHeight - h - 6, winState.y));
-  playerShell.style.setProperty("--win-x", `${Math.round(winState.x)}px`);
-  playerShell.style.setProperty("--win-y", `${Math.round(winState.y)}px`);
-  playerShell.style.setProperty("--win-w", `${Math.round(winState.w)}px`);
-}
-
-function isInPip() {
-  const v = (player.el && player.el().querySelector("video")) || document.querySelector("#vjs-player video");
-  return Boolean(
-    document.pictureInPictureElement ||
-    (typeof player.isInPictureInPicture === "function" && player.isInPictureInPicture()) ||
-    (v && v.webkitPresentationMode === "picture-in-picture")
-  );
-}
-
-function showPlayer(visible) {
-  if (!visible) {
-    if (!isInPip()) player.pause();
-    playerShell.classList.add("hidden");
-    return;
-  }
-  playerShell.classList.remove("hidden");
-  applyPlayerBounds();
-}
-
-function fmtHms(sec) {
-  const s = Math.max(0, Math.floor(sec));
-  const hh = Math.floor(s / 3600);
-  const mm = Math.floor((s % 3600) / 60);
-  const ss = s % 60;
-  return (
-    String(hh).padStart(2, "0") + ":" +
-    String(mm).padStart(2, "0") + ":" +
-    String(ss).padStart(2, "0")
-  );
-}
-
-function fmtHmsMs(sec) {
-  const s = Math.max(0, sec);
-  const ms = Math.floor((s - Math.floor(s)) * 1000);
-  return fmtHms(s) + "." + String(ms).padStart(3, "0");
-}
-
-function setCellSpriteFrame(el, timeSec) {
-  if (!SPRITE.url) return;
-  const frameIdx = Math.max(0, Math.min(SPRITE.total_frames - 1, Math.floor(timeSec / SPRITE.interval)));
-  const col = frameIdx % SPRITE.cols;
-  const row = Math.floor(frameIdx / SPRITE.cols);
-  const xPct = SPRITE.cols > 1 ? (col / (SPRITE.cols - 1)) * 100 : 0;
-  const yPct = SPRITE.rows > 1 ? (row / (SPRITE.rows - 1)) * 100 : 0;
-  el.style.backgroundImage = `url("${SPRITE.url}")`;
-  el.style.backgroundSize = `${SPRITE.cols * 100}% ${SPRITE.rows * 100}%`;
-  el.style.backgroundPosition = `${xPct.toFixed(3)}% ${yPct.toFixed(3)}%`;
-}
-
-function refreshSeekbarMarkers() {
-  const seekBar = player.controlBar.progressControl.seekBar;
-  seekBar.el().querySelectorAll(".vjs-chapter-marker").forEach((m) => m.remove());
-  const totalDur = player.duration() || (CUTS.length ? CUTS[CUTS.length - 1].end_time : 0);
-  if (totalDur > 0) {
-    CUTS.slice(1).forEach((seg) => {
-      const marker = document.createElement("div");
-      marker.className = "vjs-chapter-marker";
-      marker.style.left = `${(seg.start_time / totalDur) * 100}%`;
-      seekBar.el().appendChild(marker);
-    });
-  }
-}
-
-player.ready(() => {
-  const progressControl = player.controlBar.progressControl;
-  const seekBar = progressControl.seekBar;
-
-  const spriteTip = document.createElement("div");
-  spriteTip.className = "vjs-sprite-tooltip";
-  seekBar.el().appendChild(spriteTip);
-
-  player.on("loadedmetadata", () => {
-    refreshSeekbarMarkers();
-  });
-
-  progressControl.el().addEventListener("mousemove", (e) => {
-    const rect = seekBar.el().getBoundingClientRect();
-    if (!rect.width || !CUTS.length) return;
-
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const duration = player.duration() || CUTS[CUTS.length - 1].end_time;
-    const hoverTime = ratio * duration;
-
-    setCellSpriteFrame(spriteTip, hoverTime);
-
-    const halfW = 88;
-    const rawX = ratio * rect.width;
-    const clampedX = Math.max(halfW, Math.min(rect.width - halfW, rawX));
-    spriteTip.style.left = `${clampedX}px`;
-  });
-});
-
-player.on("timeupdate", () => {
-  const t = player.currentTime();
-  const idx = CUTS.findIndex((c) => t >= c.start_time && t < c.end_time);
-  if (idx !== -1 && idx !== currentIndex) {
-    currentIndex = idx;
-    const item = CUTS[idx];
-    nowBadge.textContent = "#" + item.id;
-    nowTitle.textContent = item.title;
-    nowRange.textContent = item.source_range + " (" + item.duration_str + ")";
-    highlightActiveCard();
-  }
-});
-
-async function loadDirectory(dirPath) {
-  const res = await fetch(`/api/fs?dir=${encodeURIComponent(dirPath || "")}`);
-  const data = await res.json();
-  if (!data.ok) return;
-  currentDir = data.dir;
-  dirInput.value = currentDir;
-  fileGrid.innerHTML = "";
-
-  data.dirs.forEach((d) => {
-    const btn = document.createElement("button");
-    btn.className = "file-item";
-    btn.dataset.tippyContent = d.name;
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "file-name";
-    nameSpan.textContent = `📁 ${d.name}`;
-    const metaSpan = document.createElement("span");
-    metaSpan.className = "file-meta";
-    metaSpan.textContent = "Folder";
-    btn.appendChild(nameSpan);
-    btn.appendChild(metaSpan);
-    btn.addEventListener("click", () => loadDirectory(d.path));
-    fileGrid.appendChild(btn);
-  });
-
-  data.videos.forEach((v) => {
-    const btn = document.createElement("button");
-    btn.className = "file-item";
-    btn.dataset.tippyContent = v.name;
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "file-name";
-    nameSpan.textContent = `🎬 ${v.name}`;
-    const metaSpan = document.createElement("span");
-    metaSpan.className = "file-meta";
-    metaSpan.textContent = `${v.size_mb} MB`;
-    btn.appendChild(nameSpan);
-    btn.appendChild(metaSpan);
-    btn.addEventListener("click", () => startScan(v.path, false));
-    fileGrid.appendChild(btn);
-  });
-
-  if (typeof tippy !== "undefined") {
-    tippy(fileGrid.querySelectorAll(".file-item"), {
-      placement: "top-start",
-      delay: [60, 0],
-      maxWidth: 680,
-      appendTo: () => document.body,
-    });
-  }
-}
-
-let LAST_STATS = null;
-const statBlackEl = document.getElementById("stat-black");
-const statVisualEl = document.getElementById("stat-visual");
-const statSubEl = document.getElementById("stat-sub");
-const progressTitleEl = document.getElementById("progress-title");
-const progressSummaryEl = document.getElementById("progress-summary");
-const scanLogEl = document.getElementById("scan-log");
-
-function appendScanLog(line) {
-  if (!scanLogEl) return;
-  scanLogEl.value += (scanLogEl.value ? "\n" : "") + line;
-  scanLogEl.scrollTop = scanLogEl.scrollHeight;
-}
-
-function formatMechanismSummary(stats) {
-  if (!stats) return "";
-  return `${stats.used_black} black · ${stats.used_visual} visual · +${stats.sub_cuts} subdiv`;
-}
-
-function setPhaseUI(id, pct, info) {
-  const fill = document.getElementById(`p-fill-${id}`);
-  const pctEl = document.getElementById(`p-pct-${id}`);
-  const infoEl = document.getElementById(`p-info-${id}`);
-  if (fill) fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
-  if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
-  if (infoEl && info !== undefined) {
-    infoEl.textContent = info;
-    infoEl.dataset.tippyContent = info;
-    if (infoEl._tippy) {
-      infoEl._tippy.setContent(info);
-    } else if (typeof tippy !== "undefined") {
-      tippy(infoEl, {
-        placement: "top",
-        delay: [60, 0],
-        maxWidth: 460,
-        appendTo: () => document.body,
-      });
-    }
-  }
-}
-
-async function startScan(videoPath, forceRefresh) {
-  currentVideoPath = videoPath;
-  const slashIdx = videoPath.lastIndexOf("/");
-  const baseName = slashIdx >= 0 ? videoPath.slice(slashIdx + 1) : videoPath;
-  if (slashIdx > 0) {
-    const parentDir = videoPath.slice(0, slashIdx);
-    if (parentDir !== currentDir || dirInput.value.trim() !== parentDir) {
-      loadDirectory(parentDir);
-    }
-  }
-  showView("picker");
-  progressBox.classList.remove("hidden");
-  for (let i = 1; i <= 5; i++) setPhaseUI(i, 0, "waiting...");
-  setPhaseUI("spr", 0, "rendering...");
-
-  const payload = {
-    path: videoPath,
-    refresh: Boolean(forceRefresh),
-    min_seg: Number(document.getElementById("cfg-min").value || 180),
-    max_seg: Number(cfgMax.value || 600),
-    target_seg: Number(cfgTarget.value || 360),
-    threshold: Number(cfgTh.value || 0.38),
-    black_min_dur: Number(cfgBlackDur.value || 0.4),
-    enable_black_fades: Boolean(cfgEnableBlack.checked),
-    enable_visual_cuts: Boolean(cfgEnableVisual.checked),
-    enable_subdivide: Boolean(cfgEnableSub.checked),
-    workers: Number(document.getElementById("cfg-workers").value || 8),
+  window.__RVCG_BOOT__ = {
+    defaultCfg: __DEFAULT_CFG__,
+    initDir: __INIT_DIR__,
+    initVid: __INIT_VID__,
   };
-
-  LAST_STATS = null;
-  progressTitleEl.textContent = `Scanning: ${baseName}`;
-  progressSummaryEl.textContent = "in progress...";
-  statBlackEl.textContent = payload.enable_black_fades ? "scanning..." : "off";
-  statVisualEl.textContent = payload.enable_visual_cuts ? "scanning..." : "off";
-  statSubEl.textContent = payload.enable_subdivide ? "waiting..." : "off";
-  scanLogEl.value = `[Start] ${baseName} | min=${payload.min_seg}s workers=${payload.workers} | Stage1(black)=${payload.enable_black_fades ? payload.black_min_dur + "s" : "OFF"} Stage2(visual)=${payload.enable_visual_cuts ? payload.threshold : "OFF"} Stage3(sub)=${payload.enable_subdivide ? payload.max_seg + "s->" + payload.target_seg + "s" : "OFF"}`;
-
-  const res = await fetch("/api/scan", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const startData = await res.json();
-  if (!startData.ok) {
-    setPhaseUI(1, 0, "Error: " + (startData.error || "failed"));
-    appendScanLog("[Error] " + (startData.error || "failed"));
-    return;
-  }
-
-  let lastPhaseInfo = {};
-  const es = new EventSource(`/api/jobs/${startData.job_id}/events`);
-  es.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data);
-    if (msg.type === "phase") {
-      const pct = msg.total > 0 ? (msg.completed / msg.total) * 100 : 100;
-      setPhaseUI(msg.phase, pct, msg.info);
-      if (msg.phase === 2 && typeof msg.info === "string") {
-        const m = msg.info.match(/(\d+)\s+black fades\s+·\s+(\d+)\s+visual cuts/);
-        if (m) {
-          if (payload.enable_black_fades) statBlackEl.textContent = `${m[1]} raw`;
-          if (payload.enable_visual_cuts) statVisualEl.textContent = `${m[2]} raw`;
-          progressSummaryEl.textContent = `${Math.round(pct)}% · ${m[1]} black · ${m[2]} visual`;
-        }
-      }
-      if (msg.phase !== 2 && msg.info && lastPhaseInfo[msg.phase] !== msg.info) {
-        lastPhaseInfo[msg.phase] = msg.info;
-        appendScanLog(`[Phase ${msg.phase}/5] ${msg.info}`);
-      }
-    } else if (msg.type === "sprite") {
-      const pct = msg.total > 0 ? (msg.completed / msg.total) * 100 : 100;
-      setPhaseUI("spr", pct, msg.info || "rendering...");
-    } else if (msg.type === "complete") {
-      es.close();
-      setPhaseUI("spr", 100, "sprite sheet ready");
-      VIDEO_SRC = `/api/media?path=${encodeURIComponent(msg.video_path)}`;
-      SPRITE = msg.sprite;
-      CUTS = msg.chapters;
-      RAW_CANDIDATES = Array.isArray(msg.candidates) ? msg.candidates : [];
-      SUBTITLES = msg.subtitles || [];
-      LAST_STATS = msg.stats || null;
-      if (LAST_STATS) {
-        statBlackEl.textContent = payload.enable_black_fades
-          ? `${LAST_STATS.used_black} cuts (${LAST_STATS.raw_black} raw)`
-          : `off (${LAST_STATS.raw_black} raw)`;
-        statVisualEl.textContent = payload.enable_visual_cuts
-          ? `${LAST_STATS.used_visual} cuts (${LAST_STATS.raw_visual} raw)`
-          : `off (${LAST_STATS.raw_visual} raw)`;
-        statSubEl.textContent = payload.enable_subdivide
-          ? `+${LAST_STATS.sub_cuts} cuts (${LAST_STATS.snapped_cuts} snapped)`
-          : "off";
-        progressSummaryEl.textContent = `${CUTS.length} chapters (${formatMechanismSummary(LAST_STATS)})`;
-      } else {
-        progressSummaryEl.textContent = `${CUTS.length} chapters`;
-      }
-      progressTitleEl.textContent = `Scan Diagnostics — ${msg.video_name}`;
-      if (Array.isArray(msg.logs) && msg.logs.length) {
-        appendScanLog(msg.logs.join("\n"));
-      }
-      sourceLoaded = false;
-      brandTitle.textContent = msg.video_name;
-      setStatus(msg.already_embedded ? "✓ Embedded" : "Unmuxed", false);
-      renderGallery();
-      showView("browser");
-    } else if (msg.type === "error") {
-      es.close();
-      setPhaseUI(1, 0, "Error: " + msg.error);
-      progressSummaryEl.textContent = "error";
-      appendScanLog("[Error] " + msg.error);
-    }
-  };
-}
-
-async function syncChaptersEdit(rawChapters) {
-  const res = await fetch("/api/chapters/recalc", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chapters: rawChapters }),
-  });
-  const data = await res.json();
-  if (data.ok) {
-    CUTS = data.chapters;
-    setStatus("Unsaved edits", false);
-    renderGallery();
-    refreshSeekbarMarkers();
-  }
-}
-
-async function saveChaptersToVideo() {
-  if (!currentVideoPath || !CUTS.length) return;
-  setStatus("Embedding...", false);
-  const res = await fetch("/api/chapters/save", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path: currentVideoPath, chapters: CUTS }),
-  });
-  const data = await res.json();
-  if (data.ok) {
-    setStatus("✓ Embedded", false);
-  } else {
-    setStatus("Embed failed: " + (data.error || ""), true);
-  }
-}
-
-function openAt(index, seekTime) {
-  if (index < 0 || index >= CUTS.length) return;
-  const item = CUTS[index];
-  currentIndex = index;
-
-  nowBadge.textContent = "#" + item.id;
-  nowTitle.textContent = item.title;
-  nowRange.textContent = item.source_range + " (" + item.duration_str + ")";
-  highlightActiveCard();
-
-  if (!isInPip()) {
-    showPlayer(true);
-  }
-
-  if (sourceLoaded) {
-    player.currentTime(seekTime);
-    player.play().catch(() => {});
-  } else {
-    sourceLoaded = true;
-    player.src({ type: "video/mp4", src: VIDEO_SRC });
-    player.one("loadedmetadata", () => {
-      SUBTITLES.forEach((sub) => {
-        const blob = new Blob([sub.vtt], { type: "text/vtt;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const trackEl = player.addRemoteTextTrack(
-          {
-            kind: "subtitles",
-            label: sub.label,
-            srclang: sub.srclang,
-            src: url,
-            default: sub.default,
-          },
-          false
-        );
-        if (sub.default && trackEl && trackEl.track) {
-          trackEl.track.mode = "showing";
-        }
-      });
-      refreshSeekbarMarkers();
-      player.currentTime(seekTime);
-      player.play().catch(() => {});
-    });
-  }
-}
-
-function highlightActiveCard() {
-  document.querySelectorAll(".card").forEach((el) => {
-    el.classList.toggle("active", Number(el.dataset.index) === currentIndex);
-  });
-}
-
-function matchesFilter(item) {
-  if (!searchQuery) return true;
-  const q = searchQuery.normalize("NFC").toLowerCase();
-  return (
-    item.id.toLowerCase().includes(q) ||
-    item.title.normalize("NFC").toLowerCase().includes(q) ||
-    item.source_range.toLowerCase().includes(q)
-  );
-}
-
-function renderGallery() {
-  gallery.innerHTML = "";
-  let visibleCount = 0;
-
-  CUTS.forEach((item, index) => {
-    if (!matchesFilter(item)) return;
-    visibleCount++;
-
-    const card = document.createElement("article");
-    card.className = "card" + (index === currentIndex ? " active" : "");
-    card.dataset.index = index;
-
-    const header = document.createElement("div");
-    header.className = "card-header";
-    header.addEventListener("click", () => openAt(index, item.start_time));
-
-    const hLeft = document.createElement("div");
-    hLeft.className = "card-header-left";
-
-    const cutDot = document.createElement("span");
-    cutDot.className = "cut-dot cut-" + (item.cut_kind || "start");
-    cutDot.dataset.tippyContent = item.cut_detail || "";
-
-    const badge = document.createElement("span");
-    badge.className = "card-badge";
-    badge.textContent = "#" + item.id;
-
-    const titleInput = document.createElement("input");
-    titleInput.className = "card-title-input";
-    titleInput.value = item.title;
-    titleInput.addEventListener("click", (e) => e.stopPropagation());
-    titleInput.addEventListener("change", () => {
-      const next = CUTS.map((c, idx) => ({
-        start_time: c.start_time,
-        end_time: c.end_time,
-        title: idx === index ? titleInput.value : c.title,
-        cut_kind: c.cut_kind,
-        cut_detail: c.cut_detail,
-      }));
-      syncChaptersEdit(next);
-    });
-
-    hLeft.appendChild(cutDot);
-    hLeft.appendChild(badge);
-    hLeft.appendChild(titleInput);
-
-    const hRight = document.createElement("div");
-    hRight.className = "card-header-right";
-
-    const metaSpan = document.createElement("span");
-    metaSpan.className = "card-meta";
-    metaSpan.textContent = `${item.source_range} · ${item.duration_str}`;
-    hRight.appendChild(metaSpan);
-
-    if (CUTS.length > 1) {
-      const delBtn = document.createElement("button");
-      delBtn.className = "card-del";
-      delBtn.type = "button";
-      delBtn.textContent = "×";
-      delBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const next = CUTS.map((c) => ({
-          start_time: c.start_time,
-          end_time: c.end_time,
-          title: c.title,
-          cut_kind: c.cut_kind,
-          cut_detail: c.cut_detail,
-        }));
-        if (index === 0) {
-          next[1].start_time = next[0].start_time;
-          next[1].cut_kind = next[0].cut_kind;
-          next[1].cut_detail = next[0].cut_detail;
-        } else {
-          next[index - 1].end_time = next[index].end_time;
-        }
-        next.splice(index, 1);
-        syncChaptersEdit(next);
-      });
-      hRight.appendChild(delBtn);
-    }
-
-    header.appendChild(hLeft);
-    header.appendChild(hRight);
-
-    const grid = document.createElement("div");
-    grid.className = "contact-grid";
-
-    const slots = item.cell_times.length >= 9 ? item.cell_times.slice(0, 9) : item.cell_times;
-    slots.forEach((baseTime) => {
-      const cell = document.createElement("div");
-      cell.className = "grid-cell";
-      setCellSpriteFrame(cell, baseTime);
-
-      const timeBadge = document.createElement("span");
-      timeBadge.className = "cell-time";
-      timeBadge.textContent = fmtHms(baseTime);
-      cell.appendChild(timeBadge);
-
-      let cellVideo = null;
-      let rafId = null;
-
-      cell.addEventListener("mouseenter", () => {
-        if (cellVideo || !VIDEO_SRC) return;
-        cellVideo = document.createElement("video");
-        cellVideo.src = VIDEO_SRC;
-        cellVideo.muted = true;
-        cellVideo.playsInline = true;
-        cellVideo.preload = "auto";
-        cellVideo.addEventListener("loadedmetadata", () => {
-          if (!cellVideo) return;
-          cellVideo.currentTime = baseTime;
-          cellVideo.play().catch(() => {});
-        });
-        const tick = () => {
-          if (!cellVideo) return;
-          const ct = cellVideo.currentTime;
-          if (ct >= baseTime + item.card_dur) {
-            cellVideo.currentTime = baseTime;
-          }
-          timeBadge.textContent = fmtHmsMs(ct || baseTime);
-          rafId = requestAnimationFrame(tick);
-        };
-        rafId = requestAnimationFrame(tick);
-        cell.insertBefore(cellVideo, timeBadge);
-      });
-
-      cell.addEventListener("mouseleave", () => {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = null;
-        if (cellVideo) {
-          cellVideo.pause();
-          cellVideo.removeAttribute("src");
-          cellVideo.load();
-          cellVideo.remove();
-          cellVideo = null;
-        }
-        timeBadge.textContent = fmtHms(baseTime);
-      });
-
-      cell.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openAt(index, baseTime);
-      });
-
-      grid.appendChild(cell);
-    });
-
-    card.appendChild(header);
-    card.appendChild(grid);
-    gallery.appendChild(card);
-  });
-
-  if (typeof tippy !== "undefined") {
-    tippy(gallery.querySelectorAll(".cut-dot"), {
-      placement: "top",
-      delay: [40, 0],
-      maxWidth: 360,
-      appendTo: () => document.body,
-    });
-  }
-
-  const mech = LAST_STATS ? ` (${formatMechanismSummary(LAST_STATS)})` : "";
-  countLabel.textContent = `${visibleCount} / ${CUTS.length} chapters${mech}`;
-}
-
-document.getElementById("switch-video-btn").addEventListener("click", () => {
-  showView("picker");
-});
-
-resumeBrowserBtn.addEventListener("click", () => {
-  showView("browser");
-});
-
-document.getElementById("up-dir-btn").addEventListener("click", async () => {
-  const res = await fetch(`/api/fs?dir=${encodeURIComponent(currentDir)}&parent=1`);
-  const data = await res.json();
-  if (data.ok) loadDirectory(data.dir);
-});
-
-document.getElementById("go-path-btn").addEventListener("click", async () => {
-  const raw = dirInput.value.trim();
-  if (!raw) return;
-  const res = await fetch("/api/resolve-path", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path: raw }),
-  });
-  const data = await res.json();
-  if (data.ok && data.kind === "file") {
-    if (data.parent_dir) await loadDirectory(data.parent_dir);
-    startScan(data.path, false);
-  } else if (data.ok && data.kind === "dir") {
-    loadDirectory(data.path);
-  }
-});
-
-dirInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    document.getElementById("go-path-btn").click();
-  }
-});
-
-document.getElementById("redetect-btn").addEventListener("click", () => {
-  if (currentVideoPath) startScan(currentVideoPath, true);
-});
-
-saveChaptersBtn.addEventListener("click", () => saveChaptersToVideo());
-
-document.getElementById("split-here-btn").addEventListener("click", () => {
-  const t = Math.round(player.currentTime() * 100) / 100;
-  const idx = CUTS.findIndex((c) => t > c.start_time + 2 && t < c.end_time - 2);
-  if (idx === -1) return;
-  const next = CUTS.map((c) => ({
-    start_time: c.start_time,
-    end_time: c.end_time,
-    title: c.title,
-    cut_kind: c.cut_kind,
-    cut_detail: c.cut_detail,
-  }));
-  const origEnd = next[idx].end_time;
-  next[idx].end_time = t;
-  next.splice(idx + 1, 0, {
-    start_time: t,
-    end_time: origEnd,
-    title: `Scene ${String(idx + 2).padStart(2, "0")}`,
-    cut_kind: "manual",
-    cut_detail: `Manual split @ ${fmtHms(t)}`,
-  });
-  syncChaptersEdit(next);
-});
-
-const exportSceneBtn = document.getElementById("export-scene-btn");
-const exportSceneDropdown = document.getElementById("export-scene-dropdown");
-const manualExportPopover = document.getElementById("manual-export-popover");
-const manualStartCandsEl = document.getElementById("manual-start-cands");
-const manualEndCandsEl = document.getElementById("manual-end-cands");
-const manualStartInput = document.getElementById("manual-start-input");
-const manualEndInput = document.getElementById("manual-end-input");
-const manualStartThumb = document.getElementById("manual-start-thumb");
-const manualEndThumb = document.getElementById("manual-end-thumb");
-const manualTitleInput = document.getElementById("manual-title-input");
-const manualTitleField = document.getElementById("manual-title-field");
-const manualPathInput = document.getElementById("manual-path-input");
-const manualDurLabel = document.getElementById("manual-dur-label");
-const manualPlayheadLabel = document.getElementById("manual-playhead-label");
-const manualIncludeIntro = document.getElementById("manual-include-intro");
-
-function syncManualIntroPreference() {
-  const on = Boolean(manualIncludeIntro.checked);
-  manualTitleInput.disabled = !on;
-  if (manualTitleField) manualTitleField.classList.toggle("disabled", !on);
-  try {
-    localStorage.setItem("rvcg_manual_include_intro", on ? "true" : "false");
-  } catch (_) {}
-}
-
-try {
-  manualIncludeIntro.checked = localStorage.getItem("rvcg_manual_include_intro") !== "false";
-} catch (_) {}
-syncManualIntroPreference();
-manualIncludeIntro.addEventListener("change", syncManualIntroPreference);
-
-function getTotalDuration() {
-  return player.duration() || (CUTS.length ? CUTS[CUTS.length - 1].end_time : 0);
-}
-
-function getActiveChapterAt(t) {
-  if (!CUTS.length) {
-    return {
-      id: "01",
-      scene_number: 1,
-      start_time: 0,
-      end_time: Math.max(1, getTotalDuration()),
-      title: "Scene 01",
-      card_dur: 8.4,
-    };
-  }
-  let idx = CUTS.findIndex((c) => t >= c.start_time && t < c.end_time);
-  if (idx === -1) idx = currentIndex >= 0 && currentIndex < CUTS.length ? currentIndex : 0;
-  return CUTS[idx];
-}
-
-function getActiveCandidateCuts() {
-  const bOn = cfgEnableBlack.checked;
-  const vOn = cfgEnableVisual.checked;
-  const th = Number(cfgTh.value || 0.38);
-  const out = [];
-
-  RAW_CANDIDATES.forEach((c) => {
-    const ts = Number(c.timestamp || 0);
-    const sc = Number(c.score || 0);
-    if (c.kind === "black" && bOn) {
-      out.push({
-        timestamp: ts,
-        kind: "black",
-        score: 2.0,
-        detail: c.detail || `Black fade @ ${fmtHms(ts)}`,
-        label: "Black Fade",
-      });
-    } else if (c.kind === "visual" && vOn && sc >= th) {
-      out.push({
-        timestamp: ts,
-        kind: "visual",
-        score: sc,
-        detail: c.detail || `Visual cut @ ${fmtHms(ts)} (score=${sc.toFixed(3)})`,
-        label: `Visual ${sc.toFixed(2)}`,
-      });
-    }
-  });
-
-  CUTS.forEach((ch) => {
-    if (!out.some((x) => Math.abs(x.timestamp - ch.start_time) < 0.4)) {
-      out.push({
-        timestamp: ch.start_time,
-        kind: ch.cut_kind || "start",
-        score: 1.5,
-        detail: ch.cut_detail || `Chapter #${ch.id} start @ ${fmtHms(ch.start_time)}`,
-        label: `Chapter #${ch.id}`,
-      });
-    }
-  });
-
-  const totalDur = getTotalDuration();
-  if (totalDur > 0 && !out.some((x) => Math.abs(x.timestamp - totalDur) < 0.4)) {
-    out.push({
-      timestamp: Math.round(totalDur * 100) / 100,
-      kind: "start",
-      score: 1.5,
-      detail: `Video end @ ${fmtHms(totalDur)}`,
-      label: "Video End",
-    });
-  }
-
-  out.sort((a, b) => a.timestamp - b.timestamp);
-  return out;
-}
-
-function getNearestSceneAt(playheadT) {
-  const chap = getActiveChapterAt(playheadT);
-  const cands = getActiveCandidateCuts();
-  const before = cands.filter((c) => c.timestamp <= playheadT - 0.3);
-  const startT = before.length ? before[before.length - 1].timestamp : chap.start_time;
-  const after = cands.filter((c) => c.timestamp >= Math.max(playheadT + 0.3, startT + 1.0));
-  const endT = after.length ? after[0].timestamp : Math.max(startT + 1.0, chap.end_time);
-  return {
-    id: chap.id || "01",
-    scene_number: chap.scene_number || 1,
-    start_time: Math.round(startT * 100) / 100,
-    end_time: Math.round(endT * 100) / 100,
-    title: chap.title || "Scene 01",
-    card_dur: chap.card_dur || 8.4,
-  };
-}
-
-function buildDefaultExportPath(sceneObj, prefix = "cut") {
-  const slug = fmtHms(sceneObj.start_time).replace(/:/g, "-");
-  const baseStem = currentVideoPath.replace(/\.[^/.]+$/, "");
-  return `${baseStem}_cuts/${prefix}_${sceneObj.id || "01"}_${slug}.mp4`;
-}
-
-async function executeSceneExport(sceneObj, targetOut, btnEl, includeIntro = true) {
-  if (!currentVideoPath || !targetOut || !targetOut.trim()) return false;
-  const origText = btnEl.textContent;
-  btnEl.disabled = true;
-  btnEl.textContent = "Exporting...";
-  setStatus(`Exporting ${fmtHms(sceneObj.start_time)}–${fmtHms(sceneObj.end_time)}...`, false);
-  try {
-    const res = await fetch("/api/chapters/export-scene", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        path: currentVideoPath,
-        scene: sceneObj,
-        output_path: targetOut.trim(),
-        include_intro: Boolean(includeIntro),
-      }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      setStatus("", false, data.path);
-      return true;
-    }
-    setStatus(`Export failed: ${data.error || "error"}`, true);
-    return false;
-  } catch (_) {
-    setStatus("Export failed", true);
-    return false;
-  } finally {
-    btnEl.disabled = false;
-    btnEl.textContent = origText;
-  }
-}
-
-async function promptAndExportScene(sceneObj, prefix = "cut") {
-  const defaultOut = buildDefaultExportPath(sceneObj, prefix);
-  const targetOut = window.prompt("Save exported scene to:", defaultOut);
-  if (!targetOut || !targetOut.trim()) return;
-  await executeSceneExport(sceneObj, targetOut, exportSceneBtn, true);
-}
-
-function parseTimeInput(raw) {
-  const s = String(raw || "").trim();
-  if (!s) return NaN;
-  if (/^\d+(\.\d+)?$/.test(s)) return Number(s);
-  const parts = s.split(":").map(Number);
-  if (parts.some((n) => Number.isNaN(n) || n < 0)) return NaN;
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return NaN;
-}
-
-function attachHoverPreviewVideo(thumbEl, getTimeFn) {
-  let vEl = null;
-  thumbEl.addEventListener("mouseenter", () => {
-    if (vEl || !VIDEO_SRC) return;
-    const t = Math.max(0, Number(getTimeFn() || 0));
-    vEl = document.createElement("video");
-    vEl.src = VIDEO_SRC;
-    vEl.muted = true;
-    vEl.playsInline = true;
-    vEl.preload = "auto";
-    vEl.addEventListener("loadedmetadata", () => {
-      if (!vEl) return;
-      vEl.currentTime = t;
-    });
-    thumbEl.appendChild(vEl);
-  });
-  thumbEl.addEventListener("mouseleave", () => {
-    if (!vEl) return;
-    vEl.pause();
-    vEl.removeAttribute("src");
-    vEl.load();
-    vEl.remove();
-    vEl = null;
-  });
-}
-
-attachHoverPreviewVideo(manualStartThumb, () => parseTimeInput(manualStartInput.value));
-attachHoverPreviewVideo(manualEndThumb, () => parseTimeInput(manualEndInput.value));
-
-let manualPathTouched = false;
-let manualPlayheadRef = 0;
-
-function pickTopCandidates(pool, mustIncludeTimes, playheadT, maxCount = 6) {
-  const chosen = [];
-  const addUnique = (cand) => {
-    if (!cand) return;
-    if (chosen.some((x) => Math.abs(x.timestamp - cand.timestamp) < 0.35)) return;
-    chosen.push(cand);
-  };
-  mustIncludeTimes.forEach((t) => {
-    const match = pool.find((c) => Math.abs(c.timestamp - t) < 0.35);
-    if (match) addUnique(match);
-  });
-  const ranked = [...pool].sort((a, b) => {
-    const distA = Math.abs(a.timestamp - playheadT);
-    const distB = Math.abs(b.timestamp - playheadT);
-    const rankA = distA / (1 + a.score * 1.5);
-    const rankB = distB / (1 + b.score * 1.5);
-    return rankA - rankB;
-  });
-  for (const c of ranked) {
-    if (chosen.length >= maxCount) break;
-    addUnique(c);
-  }
-  chosen.sort((a, b) => a.timestamp - b.timestamp);
-  return chosen;
-}
-
-function syncManualTrimUI(updateInputs = false) {
-  const totalDur = getTotalDuration() || 36000;
-  let s = parseTimeInput(manualStartInput.value);
-  let e = parseTimeInput(manualEndInput.value);
-  if (Number.isNaN(s)) s = 0;
-  if (Number.isNaN(e)) e = Math.max(s + 1, totalDur);
-  s = Math.max(0, Math.min(totalDur - 0.5, s));
-  e = Math.max(s + 0.5, Math.min(totalDur, e));
-
-  if (updateInputs) {
-    manualStartInput.value = fmtHmsMs(s);
-    manualEndInput.value = fmtHmsMs(e);
-  }
-
-  setCellSpriteFrame(manualStartThumb, s);
-  setCellSpriteFrame(manualEndThumb, Math.max(0, e - 0.2));
-
-  manualStartCandsEl.querySelectorAll(".trim-cand-card").forEach((el) => {
-    el.classList.toggle("selected", Math.abs(Number(el.dataset.ts) - s) < 0.25);
-  });
-  manualEndCandsEl.querySelectorAll(".trim-cand-card").forEach((el) => {
-    el.classList.toggle("selected", Math.abs(Number(el.dataset.ts) - e) < 0.25);
-  });
-
-  const dur = Math.max(0.5, e - s);
-  manualDurLabel.textContent = `Trim Range: ${fmtHmsMs(s)} – ${fmtHmsMs(e)} (${dur.toFixed(1)}s)`;
-
-  if (!manualPathTouched) {
-    const chap = getActiveChapterAt(manualPlayheadRef);
-    manualPathInput.value = buildDefaultExportPath(
-      { id: chap.id || "01", start_time: s },
-      "trim"
-    );
-  }
-}
-
-function renderCandidateCards(containerEl, cands, playheadT, onSelect) {
-  containerEl.innerHTML = "";
-  cands.forEach((cand) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "trim-cand-card";
-    btn.dataset.ts = cand.timestamp;
-    btn.dataset.tippyContent = cand.detail || cand.label;
-
-    const thumb = document.createElement("div");
-    thumb.className = "trim-cand-thumb";
-    setCellSpriteFrame(thumb, cand.timestamp);
-    attachHoverPreviewVideo(thumb, () => cand.timestamp);
-
-    const delta = cand.timestamp - playheadT;
-    const deltaBadge = document.createElement("span");
-    deltaBadge.className = "trim-cand-delta";
-    deltaBadge.textContent = `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}s`;
-    thumb.appendChild(deltaBadge);
-
-    const meta = document.createElement("div");
-    meta.className = "trim-cand-meta";
-
-    const row = document.createElement("div");
-    row.className = "trim-cand-row";
-    const dot = document.createElement("span");
-    dot.className = `cut-dot cut-${cand.kind || "start"}`;
-    const tsSpan = document.createElement("span");
-    tsSpan.className = "trim-cand-ts";
-    tsSpan.textContent = fmtHms(cand.timestamp);
-    row.appendChild(dot);
-    row.appendChild(tsSpan);
-
-    const lbl = document.createElement("div");
-    lbl.className = "trim-cand-label";
-    lbl.textContent = cand.label;
-
-    meta.appendChild(row);
-    meta.appendChild(lbl);
-
-    btn.appendChild(thumb);
-    btn.appendChild(meta);
-    btn.addEventListener("click", () => onSelect(cand.timestamp));
-    containerEl.appendChild(btn);
-  });
-
-  if (typeof tippy !== "undefined") {
-    tippy(containerEl.querySelectorAll(".trim-cand-card"), {
-      placement: "top",
-      delay: [40, 0],
-      maxWidth: 340,
-      appendTo: () => manualExportPopover,
-    });
-  }
-}
-
-function openManualExportModal() {
-  if (!currentVideoPath || !CUTS.length) return;
-  const playheadT = Math.round((player.currentTime() || 0) * 100) / 100;
-  manualPlayheadRef = playheadT;
-  manualPathTouched = false;
-
-  const chap = getActiveChapterAt(playheadT);
-  const nearest = getNearestSceneAt(playheadT);
-  const allCands = getActiveCandidateCuts();
-
-  const beforePool = allCands.filter((c) => c.timestamp <= playheadT);
-  if (!beforePool.some((c) => Math.abs(c.timestamp - playheadT) < 0.35)) {
-    beforePool.push({
-      timestamp: playheadT,
-      kind: "manual",
-      score: 1.8,
-      detail: `Current playhead @ ${fmtHmsMs(playheadT)}`,
-      label: "Playhead",
-    });
-  }
-  const startCands = pickTopCandidates(
-    beforePool,
-    [nearest.start_time, chap.start_time, playheadT],
-    playheadT,
-    6
-  );
-
-  const afterPool = allCands.filter((c) => c.timestamp >= playheadT);
-  if (!afterPool.some((c) => Math.abs(c.timestamp - playheadT) < 0.35) && playheadT > nearest.start_time + 0.5) {
-    afterPool.push({
-      timestamp: playheadT,
-      kind: "manual",
-      score: 1.8,
-      detail: `Current playhead @ ${fmtHmsMs(playheadT)}`,
-      label: "Playhead",
-    });
-  }
-  const endCands = pickTopCandidates(
-    afterPool,
-    [nearest.end_time, chap.end_time],
-    playheadT,
-    6
-  );
-
-  manualPlayheadLabel.textContent = `Playhead: ${fmtHmsMs(playheadT)}`;
-  manualStartInput.value = fmtHmsMs(nearest.start_time);
-  manualEndInput.value = fmtHmsMs(nearest.end_time);
-  manualTitleInput.value = chap.title || "Scene 01";
-
-  renderCandidateCards(manualStartCandsEl, startCands, playheadT, (ts) => {
-    manualStartInput.value = fmtHmsMs(ts);
-    syncManualTrimUI(true);
-  });
-  renderCandidateCards(manualEndCandsEl, endCands, playheadT, (ts) => {
-    manualEndInput.value = fmtHmsMs(ts);
-    syncManualTrimUI(true);
-  });
-
-  syncManualIntroPreference();
-  syncManualTrimUI(true);
-  manualExportPopover.showModal();
-}
-
-manualStartInput.addEventListener("change", () => syncManualTrimUI(true));
-manualEndInput.addEventListener("change", () => syncManualTrimUI(true));
-manualPathInput.addEventListener("input", () => {
-  manualPathTouched = true;
-});
-
-document.querySelectorAll("[data-nudge-start]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const delta = Number(btn.dataset.nudgeStart || 0);
-    const cur = parseTimeInput(manualStartInput.value) || 0;
-    manualStartInput.value = fmtHmsMs(Math.max(0, cur + delta));
-    syncManualTrimUI(true);
-  });
-});
-
-document.querySelectorAll("[data-nudge-end]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const delta = Number(btn.dataset.nudgeEnd || 0);
-    const cur = parseTimeInput(manualEndInput.value) || 1;
-    manualEndInput.value = fmtHmsMs(Math.max(0.5, cur + delta));
-    syncManualTrimUI(true);
-  });
-});
-
-document.getElementById("manual-start-playhead-btn").addEventListener("click", () => {
-  manualStartInput.value = fmtHmsMs(player.currentTime() || 0);
-  syncManualTrimUI(true);
-});
-
-document.getElementById("manual-end-playhead-btn").addEventListener("click", () => {
-  manualEndInput.value = fmtHmsMs(player.currentTime() || 1);
-  syncManualTrimUI(true);
-});
-
-document.getElementById("manual-preview-btn").addEventListener("click", () => {
-  const s = parseTimeInput(manualStartInput.value);
-  if (!Number.isNaN(s)) {
-    player.currentTime(Math.max(0, s));
-    player.play().catch(() => {});
-  }
-});
-
-document.getElementById("run-manual-export-btn").addEventListener("click", async () => {
-  const s = parseTimeInput(manualStartInput.value);
-  const e = parseTimeInput(manualEndInput.value);
-  if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return;
-  const chap = getActiveChapterAt(manualPlayheadRef);
-  const sceneObj = {
-    id: chap.id || "01",
-    scene_number: chap.scene_number || 1,
-    start_time: Math.round(s * 100) / 100,
-    end_time: Math.round(e * 100) / 100,
-    title: manualTitleInput.value.trim() || chap.title || "Scene 01",
-    card_dur: chap.card_dur || 8.4,
-  };
-  const ok = await executeSceneExport(
-    sceneObj,
-    manualPathInput.value.trim() || buildDefaultExportPath(sceneObj, "trim"),
-    document.getElementById("run-manual-export-btn"),
-    manualIncludeIntro.checked
-  );
-  if (ok) manualExportPopover.close();
-});
-
-document.getElementById("close-manual-export").addEventListener("click", () => {
-  manualExportPopover.close();
-});
-
-exportSceneBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  exportSceneDropdown.classList.toggle("hidden");
-});
-
-exportSceneDropdown.querySelectorAll("button[data-export-mode]").forEach((btn) => {
-  btn.addEventListener("click", async (e) => {
-    e.stopPropagation();
-    exportSceneDropdown.classList.add("hidden");
-    if (!currentVideoPath || !CUTS.length) return;
-    const mode = btn.dataset.exportMode;
-    const playheadT = player.currentTime() || 0;
-    if (mode === "chapter") {
-      const chap = getActiveChapterAt(playheadT);
-      await promptAndExportScene(chap, "cut");
-    } else if (mode === "nearest") {
-      const nearest = getNearestSceneAt(playheadT);
-      await promptAndExportScene(nearest, "scene");
-    } else if (mode === "manual") {
-      openManualExportModal();
-    }
-  });
-});
-
-document.getElementById("export-menu-btn").addEventListener("click", (e) => {
-  e.stopPropagation();
-  exportDropdown.classList.toggle("hidden");
-});
-
-document.addEventListener("click", () => {
-  exportDropdown.classList.add("hidden");
-  exportSceneDropdown.classList.add("hidden");
-});
-
-exportDropdown.querySelectorAll("button[data-fmt]").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const fmt = btn.dataset.fmt;
-    exportDropdown.classList.add("hidden");
-    if (!CUTS.length) return;
-    const res = await fetch("/api/chapters/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format: fmt, chapters: CUTS }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      document.getElementById("export-title").textContent = `Export (${fmt.toUpperCase()})`;
-      exportTextarea.value = data.content;
-      exportPopover.showModal();
-    }
-  });
-});
-
-document.getElementById("copy-export-btn").addEventListener("click", () => {
-  navigator.clipboard.writeText(exportTextarea.value);
-});
-document.getElementById("close-export").addEventListener("click", () => exportPopover.close());
-
-const settingsPopover = document.getElementById("settings-popover");
-const prefShowCutDot = document.getElementById("pref-show-cut-dot");
-
-function syncCutDotPreference() {
-  document.body.classList.toggle("hide-cut-dots", !prefShowCutDot.checked);
-  try {
-    localStorage.setItem("rvcg_show_cut_dot", prefShowCutDot.checked ? "true" : "false");
-  } catch (_) {}
-}
-
-try {
-  prefShowCutDot.checked = localStorage.getItem("rvcg_show_cut_dot") !== "false";
-} catch (_) {}
-syncCutDotPreference();
-
-prefShowCutDot.addEventListener("change", syncCutDotPreference);
-document.querySelectorAll(".open-settings-btn").forEach((btn) => {
-  btn.addEventListener("click", () => settingsPopover.showModal());
-});
-document.getElementById("close-settings").addEventListener("click", () => settingsPopover.close());
-
-document.getElementById("close-player-btn").addEventListener("click", () => {
-  showPlayer(false);
-});
-
-window.addEventListener("resize", () => {
-  if (!playerShell.classList.contains("hidden")) {
-    applyPlayerBounds();
-  }
-});
-
-if (typeof interact !== "undefined") {
-  interact(playerShell)
-    .draggable({
-      ignoreFrom: "button, .vjs-control-bar, input, .dropdown-menu",
-      listeners: {
-        move(event) {
-          winState.x += event.dx;
-          winState.y += event.dy;
-          applyPlayerBounds();
-        },
-      },
-    })
-    .resizable({
-      edges: { left: true, right: true, bottom: true, top: true },
-      margin: 12,
-      ignoreFrom: "button, .vjs-control-bar, .dropdown-menu",
-      listeners: {
-        move(event) {
-          let newW = event.rect.width;
-          if ((event.edges.top || event.edges.bottom) && !event.edges.left && !event.edges.right) {
-            newW = (event.rect.height - 38) * (16 / 9);
-          }
-          newW = Math.max(260, Math.min(window.innerWidth - 20, newW));
-          const prevW = winState.w;
-          const prevH = prevW * (9 / 16) + 38;
-          const newH = newW * (9 / 16) + 38;
-          if (event.edges.left) {
-            winState.x += prevW - newW;
-          }
-          if (event.edges.top) {
-            winState.y += prevH - newH;
-          }
-          winState.w = newW;
-          applyPlayerBounds();
-        },
-      },
-    });
-}
-
-document.addEventListener("keydown", (e) => {
-  if (exportPopover.open || settingsPopover.open || manualExportPopover.open) return;
-  if (playerShell.classList.contains("hidden") && !isInPip()) return;
-  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
-  if (e.key === "Escape") {
-    e.preventDefault();
-    showPlayer(false);
-    return;
-  }
-  const step = e.shiftKey ? 10 : 5;
-  if (e.key === "ArrowRight") {
-    e.preventDefault();
-    player.currentTime(Math.min(player.duration() || Infinity, player.currentTime() + step));
-  } else if (e.key === "ArrowLeft") {
-    e.preventDefault();
-    player.currentTime(Math.max(0, player.currentTime() - step));
-  } else if (e.key === " " || e.key === "k") {
-    e.preventDefault();
-    if (player.paused()) player.play().catch(() => {});
-    else player.pause();
-  } else if (e.key === "f") {
-    e.preventDefault();
-    if (player.isFullscreen()) player.exitFullscreen();
-    else player.requestFullscreen();
-  }
-});
-
-document.getElementById("search-input").addEventListener("input", (e) => {
-  searchQuery = e.target.value.trim();
-  renderGallery();
-});
-
-document.querySelectorAll(".view-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".view-btn").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    gallery.classList.toggle("list-view", btn.dataset.view === "list");
-  });
-});
-
-if (typeof tippy !== "undefined") {
-  tippy(document.querySelectorAll(".settings-panel [data-tippy-content]"), {
-    placement: "top",
-    delay: [60, 0],
-    maxWidth: 320,
-    appendTo: () => document.body,
-  });
-}
-
-loadDirectory(currentDir).then(() => {
-  if (currentVideoPath) startScan(currentVideoPath, false);
-});
 </script>
+<script type="module" src="/static/js/main.js"></script>
 </body>
 </html>
