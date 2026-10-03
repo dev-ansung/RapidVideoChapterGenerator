@@ -302,7 +302,18 @@ export function initPicker(onScanComplete) {
     }
   });
 
-  document.getElementById("redetect-btn")?.addEventListener("click", () => {
-    if (state.currentVideoPath) startScan(state.currentVideoPath, true, onScanComplete);
+  document.getElementById("redetect-btn")?.addEventListener("click", async () => {
+    const raw = dom.dirInput?.value.trim();
+    if (raw) {
+      const data = await resolvePath(raw);
+      if (data.ok && data.kind === "file") {
+        if (data.parent_dir) await loadDirectory(data.parent_dir);
+        startScan(data.path, true, onScanComplete);
+        return;
+      }
+    }
+    if (state.currentVideoPath) {
+      startScan(state.currentVideoPath, true, onScanComplete);
+    }
   });
 }

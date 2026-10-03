@@ -121,6 +121,7 @@
         <button type="button" id="up-dir-btn" class="btn btn-outline btn-sm">↑ Parent</button>
         <input id="dir-input" class="input input-bordered input-sm flex-1 font-mono text-xs" placeholder="Directory or paste/drop video file path..." />
         <button type="button" id="go-path-btn" class="btn btn-primary btn-sm">Open</button>
+        <button type="button" id="redetect-btn" class="btn btn-outline btn-sm" data-tippy-content="Re-scan video using current threshold settings (bypassing embedded chapters)">↻ Re-Detect</button>
       </div>
 
       <div id="file-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-72 overflow-y-auto p-1 bg-base-300/40 rounded-box border border-base-content/5"></div>
@@ -230,7 +231,6 @@
     </div>
     <div class="flex items-center gap-2 shrink-0">
       <input id="search-input" class="input input-bordered input-sm w-36 sm:w-56" type="search" placeholder="Search chapter..." />
-      <button type="button" id="redetect-btn" class="btn btn-outline btn-sm" data-tippy-content="Re-scan video using current threshold settings">↻ Re-Detect</button>
       <button type="button" id="save-chapters-btn" class="btn btn-primary btn-sm">Embed Chapters</button>
       <div class="relative">
         <button type="button" id="export-menu-btn" class="btn btn-outline btn-sm">Export ▾</button>
