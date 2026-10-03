@@ -31,6 +31,7 @@ class BoundaryConfig:
     scene_threshold: float = 0.38
     black_min_dur: float = 0.4
     enable_black_fades: bool = True
+    enable_white_fades: bool = True
     enable_visual_cuts: bool = True
     enable_subdivide: bool = True
     card_dur: float = 8.4
@@ -39,7 +40,9 @@ class BoundaryConfig:
     @classmethod
     def from_preset(cls, preset: str) -> "BoundaryConfig":
         if preset == "black-fades":
-            return cls(enable_black_fades=True, enable_visual_cuts=False, enable_subdivide=False)
+            return cls(
+                enable_black_fades=True, enable_white_fades=True, enable_visual_cuts=False, enable_subdivide=False
+            )
         if preset == "podcast":
             return cls(min_seg=120.0, max_seg=900.0, target_seg=450.0, scene_threshold=0.45)
         if preset == "presentation":
@@ -58,6 +61,7 @@ class VisualCut:
 @dataclass(frozen=True)
 class RawScanResult:
     black_points: list[float] = field(default_factory=list)
+    white_points: list[float] = field(default_factory=list)
     visual_cuts: list[VisualCut] = field(default_factory=list)
 
     def to_candidates_list(self) -> list[dict[str, str | float]]:
@@ -70,6 +74,15 @@ class RawScanResult:
             }
             for bp in self.black_points
         ]
+        for wp in self.white_points:
+            items.append(
+                {
+                    "timestamp": round(wp, 2),
+                    "kind": "white",
+                    "score": 2.0,
+                    "detail": f"White fade @ {fmt_hms(wp)} ({wp:.2f}s)",
+                }
+            )
         for vc in self.visual_cuts:
             items.append(
                 {
@@ -87,6 +100,8 @@ class RawScanResult:
 class BoundaryStats:
     raw_black: int = 0
     used_black: int = 0
+    raw_white: int = 0
+    used_white: int = 0
     raw_visual: int = 0
     used_visual: int = 0
     sub_cuts: int = 0
@@ -97,6 +112,8 @@ class BoundaryStats:
         return {
             "raw_black": self.raw_black,
             "used_black": self.used_black,
+            "raw_white": self.raw_white,
+            "used_white": self.used_white,
             "raw_visual": self.raw_visual,
             "used_visual": self.used_visual,
             "sub_cuts": self.sub_cuts,

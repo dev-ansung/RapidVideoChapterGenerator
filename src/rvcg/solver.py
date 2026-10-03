@@ -30,32 +30,47 @@ def place_priority_anchors(
     raw: RawScanResult,
     min_seg: float,
     enable_black_fades: bool = True,
+    enable_white_fades: bool = True,
     enable_visual_cuts: bool = True,
     logs: list[str] | None = None,
     cut_origins: dict[float, tuple[str, str]] | None = None,
-) -> tuple[list[float], int, int]:
+) -> tuple[list[float], int, int, int]:
     anchors = [0.0, duration]
     if cut_origins is not None:
         cut_origins[0.0] = ("start", "Video start (00:00:00)")
+
     n_black_used = 0
+    n_white_used = 0
+
+    fades: list[tuple[float, str, str]] = []
     if enable_black_fades:
-        for bp in sorted(raw.black_points):
-            if all(abs(bp - a) >= min_seg for a in anchors):
-                anchors.append(bp)
-                anchors.sort()
+        for bp in raw.black_points:
+            fades.append((bp, "black", f"Stage 1: Black fade @ {fmt_hms(bp)} ({bp:.2f}s)"))
+    if enable_white_fades:
+        for wp in raw.white_points:
+            fades.append((wp, "white", f"Stage 1: White fade @ {fmt_hms(wp)} ({wp:.2f}s)"))
+
+    fades.sort(key=lambda x: x[0])
+    for fp, kind, detail in fades:
+        if all(abs(fp - a) >= min_seg for a in anchors):
+            anchors.append(fp)
+            anchors.sort()
+            if kind == "black":
                 n_black_used += 1
-                if cut_origins is not None:
-                    cut_origins[round(bp, 2)] = ("black", f"Stage 1: Black fade @ {fmt_hms(bp)} ({bp:.2f}s)")
-                if logs is not None:
-                    logs.append(f"[Stage 1] Black fade @ {fmt_hms(bp)} ({bp:.2f}s) -> KEPT")
-            elif logs is not None:
-                nearest = min(anchors, key=lambda a: abs(bp - a))
-                logs.append(
-                    f"[Stage 1] Black fade @ {fmt_hms(bp)} ({bp:.2f}s) -> SUPPRESSED "
-                    f"({abs(bp - nearest):.1f}s from {fmt_hms(nearest)} < min {min_seg:.0f}s)"
-                )
-    elif logs is not None:
-        logs.append("[Stage 1] Black Fades disabled")
+            else:
+                n_white_used += 1
+            if cut_origins is not None:
+                cut_origins[round(fp, 2)] = (kind, detail)
+            if logs is not None:
+                logs.append(f"[Stage 1] {kind.capitalize()} fade @ {fmt_hms(fp)} ({fp:.2f}s) -> KEPT")
+        elif logs is not None:
+            nearest = min(anchors, key=lambda a: abs(fp - a))
+            logs.append(
+                f"[Stage 1] {kind.capitalize()} fade @ {fmt_hms(fp)} ({fp:.2f}s) -> SUPPRESSED "
+                f"({abs(fp - nearest):.1f}s from {fmt_hms(nearest)} < min {min_seg:.0f}s)"
+            )
+    if not enable_black_fades and not enable_white_fades and logs is not None:
+        logs.append("[Stage 1] Fade transitions disabled")
 
     n_visual_used = 0
     if enable_visual_cuts:
@@ -82,7 +97,7 @@ def place_priority_anchors(
     elif logs is not None:
         logs.append("[Stage 2] Visual Cuts disabled")
 
-    return anchors, n_black_used, n_visual_used
+    return anchors, n_black_used, n_white_used, n_visual_used
 
 
 def subdivide_long_gaps(
@@ -210,21 +225,22 @@ def solve_boundaries_with_stats(
             on_phase(phase, completed, total, info)
 
     logs: list[str] = [
-        f"[Scan] Raw candidates: {len(raw.black_points)} black fades, {len(raw.visual_cuts)} visual cuts (duration={fmt_hms(duration)})"
+        f"[Scan] Raw candidates: {len(raw.black_points)} black fades, {len(raw.white_points)} white fades, {len(raw.visual_cuts)} visual cuts (duration={fmt_hms(duration)})"
     ]
     cut_origins: dict[float, tuple[str, str]] = {0.0: ("start", "Video start (00:00:00)")}
 
     emit(3, 0.0, 1.0, "placing anchors...")
-    anchors, n_black, n_visual = place_priority_anchors(
+    anchors, n_black, n_white, n_visual = place_priority_anchors(
         duration,
         raw,
         config.min_seg,
         enable_black_fades=config.enable_black_fades,
+        enable_white_fades=config.enable_white_fades,
         enable_visual_cuts=config.enable_visual_cuts,
         logs=logs,
         cut_origins=cut_origins,
     )
-    emit(3, 1.0, 1.0, f"{len(anchors)} anchors ({n_black} black, {n_visual} visual)")
+    emit(3, 1.0, 1.0, f"{len(anchors)} anchors ({n_black} black, {n_white} white, {n_visual} visual)")
 
     emit(4, 0.0, 1.0, "checking gaps...")
     n_sub = 0
@@ -259,6 +275,8 @@ def solve_boundaries_with_stats(
     stats = BoundaryStats(
         raw_black=len(raw.black_points),
         used_black=n_black,
+        raw_white=len(raw.white_points),
+        used_white=n_white,
         raw_visual=len(raw.visual_cuts),
         used_visual=n_visual,
         sub_cuts=n_sub,

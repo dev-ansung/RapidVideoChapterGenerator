@@ -15,18 +15,20 @@ def test_fmt_helpers() -> None:
     assert fmt_ms(3605.0) == "01:00:05"
 
 
-def test_place_priority_anchors_prefers_black_fades_and_respects_min_seg() -> None:
+def test_place_priority_anchors_prefers_black_and_white_fades_and_respects_min_seg() -> None:
     raw = RawScanResult(
-        black_points=[300.0, 350.0, 700.0],
+        black_points=[300.0, 350.0],
+        white_points=[500.0],
         visual_cuts=[
             VisualCut(timestamp=320.0, score=0.95),
-            VisualCut(timestamp=500.0, score=0.80),
             VisualCut(timestamp=520.0, score=0.90),
+            VisualCut(timestamp=750.0, score=0.80),
         ],
     )
-    anchors, n_black, n_visual = place_priority_anchors(1000.0, raw, min_seg=180.0)
-    assert anchors == [0.0, 300.0, 520.0, 700.0, 1000.0]
-    assert n_black == 2
+    anchors, n_black, n_white, n_visual = place_priority_anchors(1000.0, raw, min_seg=180.0)
+    assert anchors == [0.0, 300.0, 500.0, 750.0, 1000.0]
+    assert n_black == 1
+    assert n_white == 1
     assert n_visual == 1
 
 
@@ -75,18 +77,21 @@ def test_solve_boundaries_preset_and_callback() -> None:
 def test_solve_boundaries_stage_toggles() -> None:
     raw = RawScanResult(
         black_points=[300.0],
+        white_points=[500.0],
         visual_cuts=[VisualCut(timestamp=600.0, score=0.92)],
     )
     black_only_cfg = BoundaryConfig.from_preset("black-fades")
     assert black_only_cfg.enable_black_fades is True
+    assert black_only_cfg.enable_white_fades is True
     assert black_only_cfg.enable_visual_cuts is False
     assert black_only_cfg.enable_subdivide is False
 
     segs_black_only = solve_boundaries(1500.0, raw, black_only_cfg)
-    assert [(s.start_time, s.end_time) for s in segs_black_only] == [(0.0, 300.0), (300.0, 1500.0)]
+    assert [(s.start_time, s.end_time) for s in segs_black_only] == [(0.0, 300.0), (300.0, 500.0), (500.0, 1500.0)]
 
     visual_only_cfg = BoundaryConfig(
         enable_black_fades=False,
+        enable_white_fades=False,
         enable_visual_cuts=True,
         enable_subdivide=False,
     )
@@ -95,23 +100,28 @@ def test_solve_boundaries_stage_toggles() -> None:
 
     full_raw = RawScanResult(
         black_points=[300.0, 350.0],
-        visual_cuts=[VisualCut(timestamp=600.0, score=0.92), VisualCut(timestamp=1050.0, score=0.61)],
+        white_points=[500.0],
+        visual_cuts=[VisualCut(timestamp=700.0, score=0.92), VisualCut(timestamp=1150.0, score=0.61)],
     )
-    segs, stats = solve_boundaries_with_stats(1700.0, full_raw, BoundaryConfig())
-    assert len(segs) == 5
-    assert [s.cut_kind for s in segs] == ["start", "black", "visual", "visual", "subdiv"]
+    segs, stats = solve_boundaries_with_stats(1800.0, full_raw, BoundaryConfig())
+    assert len(segs) == 6
+    assert [s.cut_kind for s in segs] == ["start", "black", "white", "visual", "visual", "subdiv"]
     assert "Black fade" in segs[1].cut_detail
-    assert "Visual cut" in segs[2].cut_detail
-    assert "Subdivided" in segs[4].cut_detail
+    assert "White fade" in segs[2].cut_detail
+    assert "Visual cut" in segs[3].cut_detail
+    assert "Subdivided" in segs[5].cut_detail
     assert stats.raw_black == 2
     assert stats.used_black == 1
+    assert stats.raw_white == 1
+    assert stats.used_white == 1
     assert stats.raw_visual == 2
     assert stats.used_visual == 2
     assert stats.sub_cuts == 1
     assert any("Black fade" in line for line in stats.logs)
+    assert any("White fade" in line for line in stats.logs)
     assert any("Visual cut" in line for line in stats.logs)
 
     cands = full_raw.to_candidates_list()
-    assert len(cands) == 4
-    assert [c["kind"] for c in cands] == ["black", "black", "visual", "visual"]
-    assert [c["timestamp"] for c in cands] == [300.0, 350.0, 600.0, 1050.0]
+    assert len(cands) == 5
+    assert [c["kind"] for c in cands] == ["black", "black", "white", "visual", "visual"]
+    assert [c["timestamp"] for c in cands] == [300.0, 350.0, 500.0, 700.0, 1150.0]

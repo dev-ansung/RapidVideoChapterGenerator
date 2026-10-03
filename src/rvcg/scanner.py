@@ -29,13 +29,14 @@ class ChunkSpec:
 @dataclass(frozen=True)
 class LineParseEvent:
     black_midpoints: list[float] = field(default_factory=list)
+    white_midpoints: list[float] = field(default_factory=list)
     visual_cuts: list[VisualCut] = field(default_factory=list)
     new_local_t: float | None = None
     progress_sec: float | None = None
 
     @property
     def updated(self) -> bool:
-        return bool(self.black_midpoints or self.visual_cuts or self.progress_sec is not None)
+        return bool(self.black_midpoints or self.white_midpoints or self.visual_cuts or self.progress_sec is not None)
 
 
 def compute_chunks(
@@ -74,8 +75,10 @@ def parse_ffmpeg_line(
     t_start: float,
     chunk_dur: float,
     cur_local_t: float | None,
+    is_white: bool = False,
 ) -> LineParseEvent:
     blacks: list[float] = []
+    whites: list[float] = []
     cuts: list[VisualCut] = []
     next_local_t = cur_local_t
     prog_sec: float | None = None
@@ -87,7 +90,11 @@ def parse_ffmpeg_line(
         bs = safe_float(m.group(1))
         be = safe_float(m.group(2))
         if bs is not None and be is not None:
-            blacks.append(t_start + (bs + be) / 2.0)
+            mid = t_start + (bs + be) / 2.0
+            if is_white or "Parsed_blackdetect_6" in line or "Parsed_blackdetect_5" in line or "white" in line.lower():
+                whites.append(mid)
+            else:
+                blacks.append(mid)
 
     m_pts = re.search(r"pts_time:([^\s]+)", line)
     if m_pts:
@@ -109,6 +116,7 @@ def parse_ffmpeg_line(
 
     return LineParseEvent(
         black_midpoints=blacks,
+        white_midpoints=whites,
         visual_cuts=cuts,
         new_local_t=next_local_t,
         progress_sec=prog_sec,
@@ -142,6 +150,7 @@ def scan_keyframes(
     lock = threading.Lock()
     worker_prog = {c.worker_id: 0.0 for c in chunks}
     worker_blacks: dict[int, list[float]] = {c.worker_id: [] for c in chunks}
+    worker_whites: dict[int, list[float]] = {c.worker_id: [] for c in chunks}
     worker_cuts: dict[int, list[VisualCut]] = {c.worker_id: [] for c in chunks}
 
     def run_chunk(spec: ChunkSpec) -> Path | None:
@@ -178,8 +187,10 @@ def scan_keyframes(
             ]
         elif spec.strip_path is not None:
             fc = (
-                f"[0:v]scale=240:135:flags=fast_bilinear,split=2[vd][vs];"
-                f"[vd]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gt(scene,{th})',metadata=print:file=-[vnull];"
+                f"[0:v]scale=240:135:flags=fast_bilinear,split=4[vd_blk][vd_wht][vd_cut][vs];"
+                f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,metadata=print:file=-[vnull1];"
+                f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:file=-[vnull2];"
+                f"[vd_cut]select='gt(scene,{th})',metadata=print:file=-[vnull3];"
                 f"[vs]fps=1/{interval},tile={cols}x{spec.n_rows}[vspr]"
             )
             cmd = [
@@ -201,7 +212,17 @@ def scan_keyframes(
                 "-filter_complex",
                 fc,
                 "-map",
-                "[vnull]",
+                "[vnull1]",
+                "-f",
+                "null",
+                "-",
+                "-map",
+                "[vnull2]",
+                "-f",
+                "null",
+                "-",
+                "-map",
+                "[vnull3]",
                 "-f",
                 "null",
                 "-",
@@ -216,11 +237,11 @@ def scan_keyframes(
                 str(spec.strip_path),
             ]
         else:
-            vf = (
-                f"scale=240:135:flags=fast_bilinear,"
-                f"blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,"
-                f"select='gt(scene,{th})',"
-                f"metadata=print:file=-"
+            fc = (
+                f"[0:v]scale=240:135:flags=fast_bilinear,split=3[vd_blk][vd_wht][vd_cut];"
+                f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,metadata=print:file=-[vnull1];"
+                f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:file=-[vnull2];"
+                f"[vd_cut]select='gt(scene,{th})',metadata=print:file=-[vnull3]"
             )
             cmd = [
                 "ffmpeg",
@@ -238,10 +259,20 @@ def scan_keyframes(
                 "nokey",
                 "-i",
                 str(video_path),
-                "-vf",
-                vf,
-                "-an",
-                "-sn",
+                "-filter_complex",
+                fc,
+                "-map",
+                "[vnull1]",
+                "-f",
+                "null",
+                "-",
+                "-map",
+                "[vnull2]",
+                "-f",
+                "null",
+                "-",
+                "-map",
+                "[vnull3]",
                 "-f",
                 "null",
                 "-",
@@ -265,14 +296,16 @@ def scan_keyframes(
                 with lock:
                     if not skip_boundary_scan:
                         worker_blacks[spec.worker_id].extend(ev.black_midpoints)
+                        worker_whites[spec.worker_id].extend(ev.white_midpoints)
                         worker_cuts[spec.worker_id].extend(ev.visual_cuts)
                     if ev.progress_sec is not None:
                         worker_prog[spec.worker_id] = max(worker_prog[spec.worker_id], ev.progress_sec)
                     tot_prog = min(duration, sum(worker_prog.values()))
                     n_b = sum(len(v) for v in worker_blacks.values())
+                    n_w = sum(len(v) for v in worker_whites.values())
                     n_c = sum(len(v) for v in worker_cuts.values())
                 if not skip_boundary_scan:
-                    emit(2, tot_prog, duration, f"{n_b} black fades · {n_c} visual cuts")
+                    emit(2, tot_prog, duration, f"{n_b} black · {n_w} white · {n_c} visual cuts")
                 if on_sprite is not None:
                     on_sprite(tot_prog)
 
@@ -281,9 +314,10 @@ def scan_keyframes(
             worker_prog[spec.worker_id] = chunk_dur
             tot_prog = min(duration, sum(worker_prog.values()))
             n_b = sum(len(v) for v in worker_blacks.values())
+            n_w = sum(len(v) for v in worker_whites.values())
             n_c = sum(len(v) for v in worker_cuts.values())
         if not skip_boundary_scan:
-            emit(2, tot_prog, duration, f"{n_b} black fades · {n_c} visual cuts")
+            emit(2, tot_prog, duration, f"{n_b} black · {n_w} white · {n_c} visual cuts")
         if on_sprite is not None:
             on_sprite(tot_prog)
         return spec.strip_path
@@ -333,6 +367,7 @@ def scan_keyframes(
 
     raw_res = RawScanResult(
         black_points=sorted(b for w in sorted(worker_blacks) for b in worker_blacks[w]),
+        white_points=sorted(b for w in sorted(worker_whites) for b in worker_whites[w]),
         visual_cuts=[c for w in sorted(worker_cuts) for c in worker_cuts[w]],
     )
     if not skip_boundary_scan:
@@ -340,7 +375,7 @@ def scan_keyframes(
             2,
             duration,
             duration,
-            f"{len(raw_res.black_points)} black fades · {len(raw_res.visual_cuts)} visual cuts",
+            f"{len(raw_res.black_points)} black · {len(raw_res.white_points)} white · {len(raw_res.visual_cuts)} visual",
         )
     return raw_res, sprite_meta
 
@@ -382,8 +417,23 @@ def _scan_slice_transitions(
         "-copyts",
         "-i",
         str(video_path),
-        "-vf",
-        f"scale=320:180:flags=fast_bilinear,select=gt(scene\\,{threshold:.3f}),showinfo,blackdetect=d={black_min_dur:.2f}:pic_th=0.98:pix_th=0.10",
+        "-filter_complex",
+        f"[0:v]scale=320:180:flags=fast_bilinear,split=3[v_cut][v_black][v_white];"
+        f"[v_cut]select=gt(scene\\,{threshold:.3f}),showinfo[out_cut];"
+        f"[v_black]blackdetect=d={black_min_dur:.2f}:pic_th=0.98:pix_th=0.10[out_black];"
+        f"[v_white]negate,blackdetect=d={max(0.10, black_min_dur * 0.75):.2f}:pic_th=0.85:pix_th=0.25[out_white]",
+        "-map",
+        "[out_cut]",
+        "-f",
+        "null",
+        "-",
+        "-map",
+        "[out_black]",
+        "-f",
+        "null",
+        "-",
+        "-map",
+        "[out_white]",
         "-f",
         "null",
         "-",
@@ -393,15 +443,24 @@ def _scan_slice_transitions(
     lines = proc.stderr.splitlines()
 
     for line in lines:
-        for m_b in re.finditer(r"black_start:([0-9.]+)\s+black_end:([0-9.]+)", line):
-            bs = safe_float(m_b.group(1))
-            be = safe_float(m_b.group(2))
-            if bs is not None and be is not None:
-                ts = round((bs + be) / 2.0, 3)
-                results.append(PrecisionTransition(timestamp=ts, kind="black", score=2.0, label="Black Fade"))
+        if "Parsed_blackdetect_6" in line or "Parsed_blackdetect_5" in line:
+            m_w = re.search(r"black_start:([0-9.]+)\s+black_end:([0-9.]+)", line)
+            if m_w:
+                bs = safe_float(m_w.group(1))
+                be = safe_float(m_w.group(2))
+                if bs is not None and be is not None:
+                    ts = round((bs + be) / 2.0, 3)
+                    results.append(PrecisionTransition(timestamp=ts, kind="white", score=2.0, label="White Fade"))
+        elif "black_start" in line:
+            for m_b in re.finditer(r"black_start:([0-9.]+)\s+black_end:([0-9.]+)", line):
+                bs = safe_float(m_b.group(1))
+                be = safe_float(m_b.group(2))
+                if bs is not None and be is not None:
+                    ts = round((bs + be) / 2.0, 3)
+                    results.append(PrecisionTransition(timestamp=ts, kind="black", score=2.0, label="Black Fade"))
 
         m_pts = re.search(r"pts_time:([0-9.]+)", line)
-        if m_pts:
+        if m_pts and "Parsed_showinfo" in line:
             pts = safe_float(m_pts.group(1))
             if pts is not None:
                 ts = round(pts, 3)
@@ -417,9 +476,9 @@ def _scan_slice_transitions(
                     )
                 )
 
-    # Deduplicate within 0.08s
+    # Deduplicate within 0.08s (favor black/white fades over adjacent raw cuts)
+    results.sort(key=lambda x: (x.timestamp, -x.score))
     deduped: list[PrecisionTransition] = []
-    results.sort(key=lambda x: x.timestamp)
     for r in results:
         if not any(abs(r.timestamp - ex.timestamp) < 0.08 for ex in deduped):
             deduped.append(r)

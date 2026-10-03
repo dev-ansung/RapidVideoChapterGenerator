@@ -159,16 +159,17 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
       const pct = msg.total > 0 ? (msg.completed / msg.total) * 100 : 100;
       setPhaseUI(msg.phase, pct, msg.info);
       if (msg.phase === 2 && typeof msg.info === "string") {
-        const m = msg.info.match(/(\d+)\s+black fades\s+·\s+(\d+)\s+visual cuts/);
+        const m = msg.info.match(/(\d+)\s+black\s+·\s+(\d+)\s+white\s+·\s+(\d+)\s+visual cuts/);
         if (m) {
-          if (payload.enable_black_fades && dom.statBlack) dom.statBlack.textContent = `${m[1]} raw`;
-          if (payload.enable_visual_cuts && dom.statVisual) dom.statVisual.textContent = `${m[2]} raw`;
-          if (dom.progressSummary) dom.progressSummary.textContent = `${Math.round(pct)}% · ${m[1]} black · ${m[2]} visual`;
+          const totFades = Number(m[1]) + Number(m[2]);
+          if (payload.enable_black_fades && dom.statBlack) dom.statBlack.textContent = `${totFades} raw`;
+          if (payload.enable_visual_cuts && dom.statVisual) dom.statVisual.textContent = `${m[3]} raw`;
+          if (dom.progressSummary) dom.progressSummary.textContent = `${Math.round(pct)}% · ${m[1]} black · ${m[2]} white · ${m[3]} visual`;
         }
       }
       if (msg.phase !== 2 && msg.info && lastPhaseInfo[msg.phase] !== msg.info) {
         lastPhaseInfo[msg.phase] = msg.info;
-        appendScanLog(`[Phase ${msg.phase}/5] ${msg.info}`);
+        appendScanLog(`[Phase ${msg.phase}] ${msg.info}`);
       }
     } else if (msg.type === "sprite") {
       const pct = msg.total > 0 ? (msg.completed / msg.total) * 100 : 100;
@@ -183,7 +184,11 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
       state.subtitles = msg.subtitles || [];
       state.lastStats = msg.stats || null;
       if (state.lastStats) {
-        if (dom.statBlack) dom.statBlack.textContent = payload.enable_black_fades ? `${state.lastStats.used_black} cuts (${state.lastStats.raw_black} raw)` : `off (${state.lastStats.raw_black} raw)`;
+        if (dom.statBlack) {
+          const usedFades = (state.lastStats.used_black || 0) + (state.lastStats.used_white || 0);
+          const rawFades = (state.lastStats.raw_black || 0) + (state.lastStats.raw_white || 0);
+          dom.statBlack.textContent = payload.enable_black_fades ? `${usedFades} cuts (${rawFades} raw)` : `off (${rawFades} raw)`;
+        }
         if (dom.statVisual) dom.statVisual.textContent = payload.enable_visual_cuts ? `${state.lastStats.used_visual} cuts (${state.lastStats.raw_visual} raw)` : `off (${state.lastStats.raw_visual} raw)`;
         if (dom.statSub) dom.statSub.textContent = payload.enable_subdivide ? `+${state.lastStats.sub_cuts} cuts (${state.lastStats.snapped_cuts} snapped)` : "off";
         if (dom.progressSummary) dom.progressSummary.textContent = `${state.cuts.length} chapters (${formatMechanismSummary(state.lastStats)})`;

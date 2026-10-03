@@ -18,8 +18,20 @@ def test_parse_ffmpeg_line_events() -> None:
         t_start=100.0,
         chunk_dur=300.0,
         cur_local_t=None,
+        is_white=False,
     )
     assert ev_black.black_midpoints == [111.0]
+    assert ev_black.white_midpoints == []
+
+    ev_white = parse_ffmpeg_line(
+        "black_start:5.0 black_end:7.0 black_duration:2.0",
+        t_start=100.0,
+        chunk_dur=300.0,
+        cur_local_t=None,
+        is_white=True,
+    )
+    assert ev_white.white_midpoints == [106.0]
+    assert ev_white.black_midpoints == []
 
     ev_pts = parse_ffmpeg_line(
         "frame:12 pts:1200 pts_time:45.5",
@@ -93,3 +105,38 @@ def test_find_precision_transition(tmp_path: Path) -> None:
     res_prev = find_precision_transition(vid, current_time=3.0, direction="prev", threshold=0.20)
     assert res_prev is not None
     assert 1.8 <= res_prev.timestamp <= 2.2
+
+
+def test_find_precision_transition_white_fade(tmp_path: Path) -> None:
+    import subprocess
+
+    from rvcg.scanner import find_precision_transition
+
+    vid = tmp_path / "white_fade.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:s=320x180:d=4",
+            "-vf",
+            "fade=t=out:st=1.5:d=0.5:color=white",
+            "-c:v",
+            "libx264",
+            "-g",
+            "10",
+            str(vid),
+        ],
+        stdin=subprocess.DEVNULL,
+        check=True,
+    )
+
+    res = find_precision_transition(vid, current_time=0.5, direction="next", threshold=0.20, black_min_dur=0.2)
+    assert res is not None
+    assert res.kind == "white"
+    assert 1.5 <= res.timestamp <= 3.5

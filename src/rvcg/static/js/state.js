@@ -98,7 +98,12 @@ export function parseTimeInput(raw) {
 
 export function formatMechanismSummary(stats) {
   if (!stats) return "";
-  return `${stats.used_black} black · ${stats.used_visual} visual · +${stats.sub_cuts} subdiv`;
+  const parts = [];
+  if (stats.used_black) parts.push(`${stats.used_black} black`);
+  if (stats.used_white) parts.push(`${stats.used_white} white`);
+  if (stats.used_visual) parts.push(`${stats.used_visual} visual`);
+  if (stats.sub_cuts) parts.push(`+${stats.sub_cuts} subdiv`);
+  return parts.join(" · ");
 }
 
 export function setCellSpriteFrame(el, timeSec) {
@@ -115,11 +120,14 @@ export function setCellSpriteFrame(el, timeSec) {
 
 export function cutDotColorClass(kind) {
   switch (kind) {
+    case "white":
+      return "bg-white border border-base-content/20 shadow-sm";
     case "black":
       return "bg-base-content/40";
     case "visual":
       return "bg-base-content";
     case "subdivide":
+    case "subdiv":
       return "bg-info";
     case "manual":
       return "bg-warning";
@@ -127,3 +135,4 @@ export function cutDotColorClass(kind) {
       return "bg-success";
   }
 }
+

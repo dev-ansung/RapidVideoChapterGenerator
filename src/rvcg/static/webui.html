@@ -120,15 +120,15 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black transitions.">
+          <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black and fade-to-white transitions.">
             <div class="flex items-center justify-between">
               <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
                 <input id="cfg-enable-black" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
-                <span>1. Black Fades</span>
+                <span>1. Black &amp; White Fades</span>
               </label>
               <span id="stat-black" class="text-xs text-base-content/60 font-mono"></span>
             </div>
-            <fieldset class="fieldset" data-tippy-content="Minimum fade-to-black duration in seconds required to register a black-fade cut.">
+            <fieldset class="fieldset" data-tippy-content="Minimum fade duration in seconds required to register a fade transition.">
               <legend class="fieldset-legend text-[11px]">Min Fade (s)</legend>
               <input id="cfg-black-dur" class="input input-bordered input-xs w-full" type="number" step="0.1" min="0.1" max="5.0" />
             </fieldset>
@@ -298,8 +298,9 @@
       </label>
 
       <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box text-xs border border-base-content/10">
-        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content/40"></span><span>Gray — Black fade transition (Stage 1)</span></div>
-        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content"></span><span>White — Visual scene transition (Stage 2)</span></div>
+        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content/40"></span><span>Dark Gray — Black fade transition (Stage 1)</span></div>
+        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-white border border-base-content/20 shadow-sm"></span><span>White — White fade transition (Stage 1)</span></div>
+        <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content"></span><span>Bright Gray — Visual scene transition (Stage 2)</span></div>
         <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-info"></span><span>Blue — Long-segment subdivision (Stage 3)</span></div>
         <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-success"></span><span>Emerald — Video start or embedded chapter</span></div>
         <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-warning"></span><span>Amber — Manual split</span></div>
