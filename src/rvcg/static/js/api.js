@@ -112,17 +112,3 @@ export async function startScanJob(payload) {
   return res.json();
 }
 
-export async function findNearestPrecisionTransition(videoPath, time, direction, threshold = 0.20, blackMinDur = 0.20) {
-  const res = await fetch("/api/transitions/find-nearest", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      path: videoPath,
-      time,
-      direction,
-      threshold,
-      black_min_dur: blackMinDur,
-    }),
-  });
-  return res.json();
-}

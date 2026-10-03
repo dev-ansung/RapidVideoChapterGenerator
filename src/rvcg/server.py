@@ -19,7 +19,7 @@ from pathlib import Path
 from rvcg.models import BoundaryConfig, BoundaryStats, SceneSegment, SpriteMeta, fmt_hms
 from rvcg.muxer import embed_chapters_atomic, export_scene_cut, format_chapters_export
 from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters, safe_float
-from rvcg.scanner import find_precision_transition, scan_keyframes
+from rvcg.scanner import scan_keyframes
 from rvcg.solver import compute_cell_times, segments_from_tuples, solve_boundaries_with_stats
 from rvcg.webui import STATIC_DIR, render_webui_html
 
@@ -382,24 +382,6 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(500, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
             return
 
-        if route == "/api/transitions/find-nearest":
-            vid_path, kind = resolve_any_path(str(payload.get("path", "")))
-            if vid_path is None or kind != "file":
-                self._send_json(400, json.dumps({"ok": False, "error": "Video file not found"}, ensure_ascii=False))
-                return
-            seek_t = safe_float(payload.get("time")) or 0.0
-            direction = str(payload.get("direction", "next"))
-            th = safe_float(payload.get("threshold")) or 0.20
-            bd = safe_float(payload.get("black_min_dur")) or 0.20
-            res = find_precision_transition(
-                vid_path, seek_t, direction, window_sec=30.0, threshold=th, black_min_dur=bd
-            )
-            if res is not None:
-                self._send_json(200, json.dumps({"ok": True, "found": True, **res.to_dict()}, ensure_ascii=False))
-            else:
-                self._send_json(200, json.dumps({"ok": True, "found": False}, ensure_ascii=False))
-            return
-
         if route == "/api/scan":
             vid_path, kind = resolve_any_path(str(payload.get("path", "")))
             if vid_path is None or kind != "file":
@@ -523,6 +505,20 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 rows=sprite_meta.rows,
                 total_frames=sprite_meta.total_frames,
             )
+            candidates_list = (
+                [
+                    {
+                        "timestamp": s.start_time,
+                        "kind": "embedded",
+                        "score": 2.0,
+                        "detail": f"Chapter #{s.id_str}: {s.title}",
+                    }
+                    for s in segments
+                    if s.start_time > 0
+                ]
+                if use_existing
+                else raw_scan.to_candidates_list()
+            )
             push_event(
                 json.dumps(
                     {
@@ -535,7 +531,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                         "subtitles": [t.to_dict() for t in sub_tracks],
                         "stats": stats.to_dict(),
                         "logs": stats.logs,
-                        "candidates": raw_scan.to_candidates_list(),
+                        "candidates": candidates_list,
                     },
                     ensure_ascii=False,
                 )

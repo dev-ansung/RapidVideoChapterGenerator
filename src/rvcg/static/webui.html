@@ -124,64 +124,63 @@
             </select>
           </fieldset>
 
-          <fieldset class="fieldset" data-tippy-content="Minimum allowed chapter duration in seconds across all stages. Suppresses cuts closer than this gap and merges short trailing segments.">
-            <legend class="fieldset-legend text-xs">Min Scene (s)</legend>
-            <input id="cfg-min" class="input input-bordered input-sm w-full" type="number" step="10" />
-          </fieldset>
+        <fieldset class="fieldset" data-tippy-content="Minimum allowed chapter duration in seconds across all stages. Suppresses cuts closer than this gap and merges short trailing segments.">
+          <legend class="fieldset-legend text-xs">Min Scene (s)</legend>
+          <input id="cfg-min" class="input input-bordered input-sm w-full" type="number" step="5" min="5" />
+        </fieldset>
 
-          <fieldset class="fieldset" data-tippy-content="Parallel FFmpeg worker count (1–16) used during keyframe visual scanning.">
-            <legend class="fieldset-legend text-xs">Workers</legend>
-            <input id="cfg-workers" class="input input-bordered input-sm w-full" type="number" step="1" min="1" max="16" />
+        <fieldset class="fieldset" data-tippy-content="Parallel FFmpeg worker count (1–16) used during keyframe visual scanning.">
+          <legend class="fieldset-legend text-xs">Workers</legend>
+          <input id="cfg-workers" class="input input-bordered input-sm w-full" type="number" step="1" min="1" max="16" />
+        </fieldset>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black and fade-to-white transitions.">
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+              <input id="cfg-enable-black" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
+              <span>1. Fades (Black / White)</span>
+            </label>
+            <span id="stat-black" class="text-xs text-base-content/60 font-mono"></span>
+          </div>
+          <fieldset class="fieldset" data-tippy-content="Minimum fade duration in seconds required to register a fade transition.">
+            <legend class="fieldset-legend text-[11px]">Min Fade (s)</legend>
+            <input id="cfg-black-dur" class="input input-bordered input-xs w-full" type="number" step="0.05" min="0.05" max="5.0" />
           </fieldset>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black and fade-to-white transitions.">
-            <div class="flex items-center justify-between">
-              <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                <input id="cfg-enable-black" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
-                <span>1. Fades (Black / White)</span>
-              </label>
-              <span id="stat-black" class="text-xs text-base-content/60 font-mono"></span>
-            </div>
-            <fieldset class="fieldset" data-tippy-content="Minimum fade duration in seconds required to register a fade transition.">
-              <legend class="fieldset-legend text-[11px]">Min Fade (s)</legend>
-              <input id="cfg-black-dur" class="input input-bordered input-xs w-full" type="number" step="0.1" min="0.1" max="5.0" />
-            </fieldset>
+        <div id="stage-visual" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+              <input id="cfg-enable-visual" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
+              <span>2. Visual Cuts</span>
+            </label>
+            <span id="stat-visual" class="text-xs text-base-content/60 font-mono"></span>
           </div>
+          <fieldset class="fieldset" data-tippy-content="Visual cut sensitivity (0.05–0.95). Lower values detect subtler changes; higher values require sharper transitions.">
+            <legend class="fieldset-legend text-[11px]">Visual Cut Threshold</legend>
+            <input id="cfg-th" class="input input-bordered input-xs w-full" type="number" step="0.01" min="0.05" max="0.95" />
+          </fieldset>
+        </div>
 
-          <div id="stage-visual" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
-            <div class="flex items-center justify-between">
-              <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                <input id="cfg-enable-visual" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
-                <span>2. Visual Cuts</span>
-              </label>
-              <span id="stat-visual" class="text-xs text-base-content/60 font-mono"></span>
-            </div>
-            <fieldset class="fieldset" data-tippy-content="Visual cut sensitivity (0.05–0.95). Lower values detect subtler changes; higher values require sharper transitions.">
-              <legend class="fieldset-legend text-[11px]">Threshold</legend>
-              <input id="cfg-th" class="input input-bordered input-xs w-full" type="number" step="0.02" min="0.05" max="0.95" />
-            </fieldset>
+        <div id="stage-subdivide" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+              <input id="cfg-enable-sub" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
+              <span>3. Subdivide Long</span>
+            </label>
+            <span id="stat-sub" class="text-xs text-base-content/60 font-mono"></span>
           </div>
-
-          <div id="stage-subdivide" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
-            <div class="flex items-center justify-between">
-              <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                <input id="cfg-enable-sub" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
-                <span>3. Subdivide Long</span>
-              </label>
-              <span id="stat-sub" class="text-xs text-base-content/60 font-mono"></span>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <fieldset class="fieldset" data-tippy-content="Maximum chapter duration in seconds before automatic subdivision is triggered.">
-                <legend class="fieldset-legend text-[11px]">Max (s)</legend>
-                <input id="cfg-max" class="input input-bordered input-xs w-full" type="number" step="10" />
-              </fieldset>
-              <fieldset class="fieldset" data-tippy-content="Target chapter length in seconds when subdividing chapters longer than Max (s).">
-                <legend class="fieldset-legend text-[11px]">Target (s)</legend>
-                <input id="cfg-target" class="input input-bordered input-xs w-full" type="number" step="10" />
-              </fieldset>
-            </div>
+          <div class="grid grid-cols-2 gap-2">
+            <fieldset class="fieldset" data-tippy-content="Maximum chapter duration in seconds before automatic subdivision is triggered.">
+              <legend class="fieldset-legend text-[11px]">Max (s)</legend>
+              <input id="cfg-max" class="input input-bordered input-xs w-full" type="number" step="10" />
+            </fieldset>
+            <fieldset class="fieldset" data-tippy-content="Target chapter length in seconds when subdividing chapters longer than Max (s).">
+              <legend class="fieldset-legend text-[11px]">Target (s)</legend>
+              <input id="cfg-target" class="input input-bordered input-xs w-full" type="number" step="10" />
+            </fieldset>
           </div>
         </div>
       </div>
@@ -217,7 +216,7 @@
     </div>
     <div class="flex items-center gap-2 shrink-0">
       <input id="search-input" class="input input-bordered input-sm w-36 sm:w-56" type="search" placeholder="Search chapter..." />
-      <button type="button" id="redetect-btn" class="btn btn-outline btn-sm">↻ Re-Detect</button>
+      <button type="button" id="redetect-btn" class="btn btn-outline btn-sm" data-tippy-content="Re-scan video using current threshold settings">↻ Re-Detect</button>
       <button type="button" id="save-chapters-btn" class="btn btn-primary btn-sm">Embed Chapters</button>
       <div class="relative">
         <button type="button" id="export-menu-btn" class="btn btn-outline btn-sm">Export ▾</button>
@@ -263,8 +262,8 @@
     </div>
     <div class="flex items-center gap-1.5 shrink-0">
       <div class="join">
-        <button id="prev-cut-btn" class="btn btn-outline btn-xs join-item" type="button" data-tippy-content="Jump to previous scene transition ([)">⏮ Prev Cut</button>
-        <button id="next-cut-btn" class="btn btn-outline btn-xs join-item" type="button" data-tippy-content="Jump to next scene transition (])">Next Cut ⏭</button>
+        <button id="prev-cut-btn" class="btn btn-outline btn-xs join-item" type="button" data-tippy-content="Jump to previous transition candidate ([)">⏮ Prev Cut</button>
+        <button id="next-cut-btn" class="btn btn-outline btn-xs join-item" type="button" data-tippy-content="Jump to next transition candidate (])">Next Cut ⏭</button>
       </div>
       <button id="split-here-btn" class="btn btn-primary btn-xs" type="button" data-tippy-content="Split scene at current timestamp (s)">✂ Split</button>
       <button id="export-scene-btn" class="btn btn-outline btn-xs" type="button" data-tippy-content="Export current scene clip (e)">⬇ Export</button>
@@ -298,20 +297,38 @@
     </div>
 
     <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-3 p-3 bg-base-200 rounded-box border border-base-content/10">
+        <div class="text-xs font-semibold text-base-content/70">Detection Stages</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <label class="flex items-center gap-2 text-xs cursor-pointer">
+            <input id="set-cfg-enable-black" type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked />
+            <span>Fades</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs cursor-pointer">
+            <input id="set-cfg-enable-visual" type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked />
+            <span>Visual Cuts</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs cursor-pointer">
+            <input id="set-cfg-enable-sub" type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked />
+            <span>Subdivision</span>
+          </label>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-base-200 rounded-box border border-base-content/10">
         <fieldset class="fieldset">
           <legend class="fieldset-legend text-xs">Min Scene Duration (s)</legend>
-          <input id="set-cfg-min" class="input input-bordered input-sm w-full" type="number" step="10" />
+          <input id="set-cfg-min" class="input input-bordered input-sm w-full" type="number" step="5" min="5" />
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend text-xs">Fade Min (s)</legend>
-          <input id="set-cfg-black-dur" class="input input-bordered input-sm w-full" type="number" step="0.1" min="0.1" max="5.0" />
+          <legend class="fieldset-legend text-xs">Min Fade Duration (s)</legend>
+          <input id="set-cfg-black-dur" class="input input-bordered input-sm w-full" type="number" step="0.05" min="0.05" max="5.0" />
         </fieldset>
 
         <fieldset class="fieldset">
           <legend class="fieldset-legend text-xs">Visual Cut Threshold</legend>
-          <input id="set-cfg-th" class="input input-bordered input-sm w-full" type="number" step="0.02" min="0.05" max="0.95" />
+          <input id="set-cfg-th" class="input input-bordered input-sm w-full" type="number" step="0.01" min="0.05" max="0.95" />
         </fieldset>
 
         <fieldset class="fieldset">
@@ -320,6 +337,11 @@
             <input id="set-cfg-max" class="input input-bordered input-sm w-full" type="number" step="10" placeholder="Max" />
             <input id="set-cfg-target" class="input input-bordered input-sm w-full" type="number" step="10" placeholder="Target" />
           </div>
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend text-xs">Workers</legend>
+          <input id="set-cfg-workers" class="input input-bordered input-sm w-full" type="number" step="1" min="1" max="16" />
         </fieldset>
 
         <fieldset class="fieldset">

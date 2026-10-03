@@ -1,5 +1,5 @@
 import { state, dom, setCellSpriteFrame, fmtHmsMs } from "./state.js";
-import { findNearestPrecisionTransition, recalcChapters, exportSceneClip, setStatus } from "./api.js";
+import { recalcChapters, exportSceneClip, setStatus } from "./api.js";
 
 export let player = null;
 let hudTimeout = null;
@@ -117,23 +117,57 @@ export function openAt(index, seekTime, onChapterActivated) {
   }
 }
 
-async function jumpPrecisionTransition(direction) {
-  if (!player || !state.currentVideoPath) return;
+export function seekCut(direction) {
+  if (!player) return;
   const currTime = player.currentTime();
-  const cfgVal = parseFloat(dom.cfgTh?.value);
-  const th = !isNaN(cfgVal) && cfgVal > 0 ? Math.min(cfgVal, 0.20) : 0.15;
-  const bd = parseFloat(dom.cfgBlackDur?.value) || 0.20;
-  showPlayerHud(direction === "next" ? "Seeking next cut..." : "Seeking prev cut...");
-  try {
-    const res = await findNearestPrecisionTransition(state.currentVideoPath, currTime, direction, th, bd);
-    if (res.ok && res.found) {
-      player.currentTime(res.timestamp);
-      showPlayerHud(`🎯 ${res.label} @ ${fmtHmsMs(res.timestamp)}`);
-    } else {
-      showPlayerHud(direction === "next" ? "No cut found forward" : "No cut found backward");
+  const allCuts = [];
+
+  (state.cuts || []).forEach((c) => {
+    if (c.start_time > 0.05) {
+      allCuts.push({
+        timestamp: c.start_time,
+        label: `Chapter #${c.id || ""}: ${c.title || ""}`.trim(),
+      });
     }
-  } catch (err) {
-    showPlayerHud("Seek error: " + err.message);
+  });
+
+  (state.rawCandidates || []).forEach((rc) => {
+    allCuts.push({
+      timestamp: rc.timestamp,
+      label: rc.detail || `${rc.kind || "cut"} transition @ ${fmtHmsMs(rc.timestamp)}`,
+    });
+  });
+
+  allCuts.sort((a, b) => a.timestamp - b.timestamp);
+  const deduped = [];
+  for (const cut of allCuts) {
+    if (!deduped.some((d) => Math.abs(d.timestamp - cut.timestamp) < 0.15)) {
+      deduped.push(cut);
+    }
+  }
+
+  if (!deduped.length) {
+    showPlayerHud("No cut candidates recorded");
+    return;
+  }
+
+  if (direction === "next") {
+    const target = deduped.find((c) => c.timestamp > currTime + 0.15);
+    if (target) {
+      player.currentTime(target.timestamp);
+      showPlayerHud(`🎯 ${target.label} (${fmtHmsMs(target.timestamp)})`);
+    } else {
+      showPlayerHud("No cut found forward");
+    }
+  } else {
+    const rev = [...deduped].reverse();
+    const target = rev.find((c) => c.timestamp < currTime - 0.15);
+    if (target) {
+      player.currentTime(target.timestamp);
+      showPlayerHud(`🎯 ${target.label} (${fmtHmsMs(target.timestamp)})`);
+    } else {
+      showPlayerHud("No cut found backward");
+    }
   }
 }
 
@@ -278,8 +312,8 @@ export function initPlayer(onTimeUpdateChapter, onChaptersChanged) {
     showPlayer(false);
   });
 
-  dom.prevCutBtn?.addEventListener("click", () => jumpPrecisionTransition("prev"));
-  dom.nextCutBtn?.addEventListener("click", () => jumpPrecisionTransition("next"));
+  dom.prevCutBtn?.addEventListener("click", () => seekCut("prev"));
+  dom.nextCutBtn?.addEventListener("click", () => seekCut("next"));
   dom.splitHereBtn?.addEventListener("click", () => splitCurrentScene(onChaptersChanged));
   dom.exportSceneBtn?.addEventListener("click", () => exportActiveScene());
 
@@ -340,10 +374,10 @@ export function initPlayer(onTimeUpdateChapter, onChaptersChanged) {
     const step = e.shiftKey ? 10 : 5;
     if (e.key === "[") {
       e.preventDefault();
-      jumpPrecisionTransition("prev");
+      seekCut("prev");
     } else if (e.key === "]") {
       e.preventDefault();
-      jumpPrecisionTransition("next");
+      seekCut("next");
     } else if (e.key === "s" || e.key === "S") {
       e.preventDefault();
       splitCurrentScene(onChaptersChanged);

@@ -249,19 +249,6 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
         assert reveal_res.get("ok") is True
         assert revealed_paths == [out_scene_path]
 
-        trans_res = _post_json(
-            f"{base_url}/api/transitions/find-nearest",
-            {
-                "path": str(vid),
-                "time": 0.0,
-                "direction": "next",
-                "threshold": 0.20,
-                "black_min_dur": 0.20,
-            },
-        )
-        assert trans_res.get("ok") is True
-        assert "found" in trans_res
-
         scan_start = _post_json(
             f"{base_url}/api/scan",
             {

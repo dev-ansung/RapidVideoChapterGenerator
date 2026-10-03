@@ -61,85 +61,21 @@ def test_parse_ffmpeg_line_events() -> None:
     assert ev_out.progress_sec == 120.0
 
 
-def test_find_precision_transition(tmp_path: Path) -> None:
-    import subprocess
+def test_to_candidates_list() -> None:
+    from rvcg.models import RawScanResult, VisualCut
 
-    from rvcg.scanner import find_precision_transition
-
-    vid = tmp_path / "scene_change.mp4"
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-nostdin",
-            "-y",
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=red:s=320x180:d=2",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=blue:s=320x180:d=2",
-            "-filter_complex",
-            "[0:v][1:v]concat=n=2:v=1:a=0[out]",
-            "-map",
-            "[out]",
-            "-c:v",
-            "libx264",
-            "-g",
-            "10",
-            str(vid),
-        ],
-        stdin=subprocess.DEVNULL,
-        check=True,
+    raw = RawScanResult(
+        black_points=[12.5, 45.0],
+        white_points=[30.0],
+        visual_cuts=[VisualCut(timestamp=20.0, score=0.65), VisualCut(timestamp=50.0, score=0.45)],
     )
-
-    # Next cut from t=0.5s should find the scene change around 2.0s
-    res_next = find_precision_transition(vid, current_time=0.5, direction="next", threshold=0.20)
-    assert res_next is not None
-    assert 1.8 <= res_next.timestamp <= 2.2
-
-    # Prev cut from t=3.0s should find the scene change around 2.0s
-    res_prev = find_precision_transition(vid, current_time=3.0, direction="prev", threshold=0.20)
-    assert res_prev is not None
-    assert 1.8 <= res_prev.timestamp <= 2.2
-
-
-def test_find_precision_transition_white_fade(tmp_path: Path) -> None:
-    import subprocess
-
-    from rvcg.scanner import find_precision_transition
-
-    vid = tmp_path / "white_fade.mp4"
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-nostdin",
-            "-y",
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=blue:s=320x180:d=4",
-            "-vf",
-            "fade=t=out:st=1.5:d=0.5:color=white",
-            "-c:v",
-            "libx264",
-            "-g",
-            "10",
-            str(vid),
-        ],
-        stdin=subprocess.DEVNULL,
-        check=True,
-    )
-
-    res = find_precision_transition(vid, current_time=0.5, direction="next", threshold=0.20, black_min_dur=0.2)
-    assert res is not None
-    assert res.kind == "white"
-    assert 1.5 <= res.timestamp <= 3.5
+    candidates = raw.to_candidates_list()
+    assert len(candidates) == 5
+    timestamps = [c["timestamp"] for c in candidates]
+    assert timestamps == [12.5, 20.0, 30.0, 45.0, 50.0]
+    assert candidates[0]["kind"] == "black"
+    assert candidates[1]["kind"] == "visual"
+    assert candidates[2]["kind"] == "white"
 
 
 def test_scan_keyframes_progress_and_sprites(tmp_path: Path) -> None:
