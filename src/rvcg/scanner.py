@@ -8,6 +8,7 @@ from pathlib import Path
 
 from rvcg.models import (
     BoundaryConfig,
+    FadePoint,
     PhaseProgressCallback,
     RawScanResult,
     SpriteMeta,
@@ -28,8 +29,8 @@ class ChunkSpec:
 
 @dataclass(frozen=True)
 class LineParseEvent:
-    black_midpoints: list[float] = field(default_factory=list)
-    white_midpoints: list[float] = field(default_factory=list)
+    black_midpoints: list[FadePoint] = field(default_factory=list)
+    white_midpoints: list[FadePoint] = field(default_factory=list)
     visual_cuts: list[VisualCut] = field(default_factory=list)
     new_local_t: float | None = None
     progress_sec: float | None = None
@@ -78,8 +79,8 @@ def parse_ffmpeg_line(
     is_white: bool = False,
     scene_threshold: float = 0.0,
 ) -> LineParseEvent:
-    blacks: list[float] = []
-    whites: list[float] = []
+    blacks: list[FadePoint] = []
+    whites: list[FadePoint] = []
     cuts: list[VisualCut] = []
     next_local_t = cur_local_t
     prog_sec: float | None = None
@@ -90,8 +91,10 @@ def parse_ffmpeg_line(
     ):
         bs = safe_float(m.group(1))
         be = safe_float(m.group(2))
+        bd = safe_float(m.group(3)) or (be - bs if bs is not None and be is not None else 0.0)
         if bs is not None and be is not None:
             mid = t_start + (bs + be) / 2.0
+            fp = FadePoint(timestamp=mid, duration=bd)
             if (
                 is_white
                 or "Parsed_blackdetect_6" in line
@@ -99,9 +102,9 @@ def parse_ffmpeg_line(
                 or "Parsed_blackdetect_4" in line
                 or "white" in line.lower()
             ):
-                whites.append(mid)
+                whites.append(fp)
             else:
-                blacks.append(mid)
+                blacks.append(fp)
 
     m_pts = re.search(r"pts_time:([^\s]+)", line)
     if m_pts:
@@ -156,8 +159,8 @@ def scan_keyframes(
     chunks = compute_chunks(duration, total_rows, row_dur, config.workers, thumbs_dir)
     lock = threading.Lock()
     worker_prog = {c.worker_id: 0.0 for c in chunks}
-    worker_blacks: dict[int, list[float]] = {c.worker_id: [] for c in chunks}
-    worker_whites: dict[int, list[float]] = {c.worker_id: [] for c in chunks}
+    worker_blacks: dict[int, list[FadePoint]] = {c.worker_id: [] for c in chunks}
+    worker_whites: dict[int, list[FadePoint]] = {c.worker_id: [] for c in chunks}
     worker_cuts: dict[int, list[VisualCut]] = {c.worker_id: [] for c in chunks}
 
     if not skip_boundary_scan:

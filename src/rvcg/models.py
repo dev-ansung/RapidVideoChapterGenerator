@@ -53,6 +53,19 @@ class BoundaryConfig:
 
 
 @dataclass(frozen=True)
+class FadePoint:
+    timestamp: float
+    duration: float = 0.0
+
+    def __lt__(self, other: object) -> bool:
+        if isinstance(other, FadePoint):
+            return self.timestamp < other.timestamp
+        if isinstance(other, (int, float)):
+            return self.timestamp < float(other)
+        return NotImplemented
+
+
+@dataclass(frozen=True)
 class VisualCut:
     timestamp: float
     score: float
@@ -60,27 +73,34 @@ class VisualCut:
 
 @dataclass(frozen=True)
 class RawScanResult:
-    black_points: list[float] = field(default_factory=list)
-    white_points: list[float] = field(default_factory=list)
+    black_points: list[FadePoint | float] = field(default_factory=list)
+    white_points: list[FadePoint | float] = field(default_factory=list)
     visual_cuts: list[VisualCut] = field(default_factory=list)
 
     def to_candidates_list(self) -> list[dict[str, str | float]]:
-        items: list[dict[str, str | float]] = [
-            {
-                "timestamp": round(bp, 2),
-                "kind": "black",
-                "score": 2.0,
-                "detail": f"Black fade @ {fmt_hms(bp)} ({bp:.2f}s)",
-            }
-            for bp in self.black_points
-        ]
-        for wp in self.white_points:
+        items: list[dict[str, str | float]] = []
+        for bp in self.black_points:
+            ts = bp.timestamp if isinstance(bp, FadePoint) else float(bp)
+            dur = bp.duration if isinstance(bp, FadePoint) else 0.0
+            dur_str = f" ({dur:.2f}s fade)" if dur > 0 else ""
             items.append(
                 {
-                    "timestamp": round(wp, 2),
+                    "timestamp": round(ts, 2),
+                    "kind": "black",
+                    "score": 2.0,
+                    "detail": f"Black fade @ {fmt_hms(ts)}{dur_str}",
+                }
+            )
+        for wp in self.white_points:
+            ts = wp.timestamp if isinstance(wp, FadePoint) else float(wp)
+            dur = wp.duration if isinstance(wp, FadePoint) else 0.0
+            dur_str = f" ({dur:.2f}s fade)" if dur > 0 else ""
+            items.append(
+                {
+                    "timestamp": round(ts, 2),
                     "kind": "white",
                     "score": 2.0,
-                    "detail": f"White fade @ {fmt_hms(wp)} ({wp:.2f}s)",
+                    "detail": f"White fade @ {fmt_hms(ts)}{dur_str}",
                 }
             )
         for vc in self.visual_cuts:

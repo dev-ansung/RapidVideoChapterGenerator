@@ -3,6 +3,7 @@ import math
 from rvcg.models import (
     BoundaryConfig,
     BoundaryStats,
+    FadePoint,
     PhaseProgressCallback,
     RawScanResult,
     SceneSegment,
@@ -42,16 +43,23 @@ def place_priority_anchors(
     n_black_used = 0
     n_white_used = 0
 
-    fades: list[tuple[float, str, str]] = []
+    fades: list[tuple[float, str, str, float]] = []
     if enable_black_fades:
         for bp in raw.black_points:
-            fades.append((bp, "black", f"Stage 1: Black fade @ {fmt_hms(bp)} ({bp:.2f}s)"))
+            ts = bp.timestamp if isinstance(bp, FadePoint) else float(bp)
+            dur = bp.duration if isinstance(bp, FadePoint) else 0.0
+            dur_str = f" ({dur:.2f}s fade)" if dur > 0 else ""
+            fades.append((ts, "black", f"Stage 1: Black fade @ {fmt_hms(ts)}{dur_str}", dur))
     if enable_white_fades:
         for wp in raw.white_points:
-            fades.append((wp, "white", f"Stage 1: White fade @ {fmt_hms(wp)} ({wp:.2f}s)"))
+            ts = wp.timestamp if isinstance(wp, FadePoint) else float(wp)
+            dur = wp.duration if isinstance(wp, FadePoint) else 0.0
+            dur_str = f" ({dur:.2f}s fade)" if dur > 0 else ""
+            fades.append((ts, "white", f"Stage 1: White fade @ {fmt_hms(ts)}{dur_str}", dur))
 
     fades.sort(key=lambda x: x[0])
-    for fp, kind, detail in fades:
+    for fp, kind, detail, dur in fades:
+        dur_str = f" ({dur:.2f}s fade)" if dur > 0 else ""
         if all(abs(fp - a) >= min_seg for a in anchors):
             anchors.append(fp)
             anchors.sort()
@@ -62,11 +70,11 @@ def place_priority_anchors(
             if cut_origins is not None:
                 cut_origins[round(fp, 2)] = (kind, detail)
             if logs is not None:
-                logs.append(f"[Stage 1] {kind.capitalize()} fade @ {fmt_hms(fp)} ({fp:.2f}s) -> KEPT")
+                logs.append(f"[Stage 1] {kind.capitalize()} fade @ {fmt_hms(fp)}{dur_str} -> KEPT")
         elif logs is not None:
             nearest = min(anchors, key=lambda a: abs(fp - a))
             logs.append(
-                f"[Stage 1] {kind.capitalize()} fade @ {fmt_hms(fp)} ({fp:.2f}s) -> SUPPRESSED "
+                f"[Stage 1] {kind.capitalize()} fade @ {fmt_hms(fp)}{dur_str} -> SUPPRESSED "
                 f"({abs(fp - nearest):.1f}s from {fmt_hms(nearest)} < min {min_seg:.0f}s)"
             )
     if not enable_black_fades and not enable_white_fades and logs is not None:

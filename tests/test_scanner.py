@@ -13,6 +13,8 @@ def test_compute_chunks_row_aligned(tmp_path: Path) -> None:
 
 
 def test_parse_ffmpeg_line_events() -> None:
+    from rvcg.models import FadePoint
+
     ev_black = parse_ffmpeg_line(
         "black_start:10.0 black_end:12.0 black_duration:2.0",
         t_start=100.0,
@@ -20,7 +22,7 @@ def test_parse_ffmpeg_line_events() -> None:
         cur_local_t=None,
         is_white=False,
     )
-    assert ev_black.black_midpoints == [111.0]
+    assert ev_black.black_midpoints == [FadePoint(timestamp=111.0, duration=2.0)]
     assert ev_black.white_midpoints == []
 
     ev_white = parse_ffmpeg_line(
@@ -30,7 +32,7 @@ def test_parse_ffmpeg_line_events() -> None:
         cur_local_t=None,
         is_white=True,
     )
-    assert ev_white.white_midpoints == [106.0]
+    assert ev_white.white_midpoints == [FadePoint(timestamp=106.0, duration=2.0)]
     assert ev_white.black_midpoints == []
 
     ev_pts = parse_ffmpeg_line(
