@@ -120,7 +120,8 @@ export function openAt(index, seekTime, onChapterActivated) {
 async function jumpPrecisionTransition(direction) {
   if (!player || !state.currentVideoPath) return;
   const currTime = player.currentTime();
-  const th = parseFloat(dom.cfgTh?.value) || 0.20;
+  const cfgVal = parseFloat(dom.cfgTh?.value);
+  const th = !isNaN(cfgVal) && cfgVal > 0 ? Math.min(cfgVal, 0.20) : 0.15;
   const bd = parseFloat(dom.cfgBlackDur?.value) || 0.20;
   showPlayerHud(direction === "next" ? "Seeking next cut..." : "Seeking prev cut...");
   try {

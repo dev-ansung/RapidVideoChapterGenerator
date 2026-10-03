@@ -379,6 +379,7 @@ def _scan_slice_transitions(
         f"{t_start:.3f}",
         "-t",
         f"{slice_dur:.3f}",
+        "-copyts",
         "-i",
         str(video_path),
         "-vf",
@@ -396,17 +397,17 @@ def _scan_slice_transitions(
             bs = safe_float(m_b.group(1))
             be = safe_float(m_b.group(2))
             if bs is not None and be is not None:
-                ts = round(t_start + (bs + be) / 2.0, 3)
+                ts = round((bs + be) / 2.0, 3)
                 results.append(PrecisionTransition(timestamp=ts, kind="black", score=2.0, label="Black Fade"))
 
         m_pts = re.search(r"pts_time:([0-9.]+)", line)
         if m_pts:
             pts = safe_float(m_pts.group(1))
             if pts is not None:
-                ts = round(t_start + pts, 3)
+                ts = round(pts, 3)
                 m_sc = re.search(r"lavfi\.scene_score=([0-9.]+)", line)
-                sc = safe_float(m_sc.group(1)) if m_sc else 0.50
-                score_val = sc if sc is not None else 0.50
+                sc = safe_float(m_sc.group(1)) if m_sc else threshold
+                score_val = sc if sc is not None else threshold
                 results.append(
                     PrecisionTransition(
                         timestamp=ts,
@@ -429,37 +430,35 @@ def find_precision_transition(
     video_path: Path,
     current_time: float,
     direction: str,
-    window_sec: float = 30.0,
-    threshold: float = 0.20,
+    window_sec: float = 45.0,
+    threshold: float = 0.15,
     black_min_dur: float = 0.20,
 ) -> PrecisionTransition | None:
     norm_dir = direction.strip().lower()
+    windows = [window_sec, window_sec * 4.0, window_sec * 10.0]
+
     if norm_dir == "prev":
-        t_start = max(0.0, current_time - window_sec)
-        slice_dur = current_time - t_start
-        cuts = _scan_slice_transitions(video_path, t_start, slice_dur, threshold, black_min_dur)
-        matches = [c for c in cuts if c.timestamp < current_time - 0.05]
-        if matches:
-            return matches[-1]
-        # Expand window if not found
-        if t_start > 0:
-            exp_start = max(0.0, current_time - (window_sec * 3.0))
-            exp_dur = t_start - exp_start
-            exp_cuts = _scan_slice_transitions(video_path, exp_start, exp_dur, threshold, black_min_dur)
-            exp_matches = [c for c in exp_cuts if c.timestamp < current_time - 0.05]
-            if exp_matches:
-                return exp_matches[-1]
+        for win in windows:
+            t_start = max(0.0, current_time - win)
+            slice_dur = current_time - t_start
+            if slice_dur <= 0.05:
+                break
+            cuts = _scan_slice_transitions(video_path, t_start, slice_dur, threshold, black_min_dur)
+            matches = [c for c in cuts if c.timestamp < current_time - 0.05]
+            if matches:
+                return matches[-1]
+            if t_start == 0.0:
+                break
     else:
-        t_start = current_time
-        slice_dur = window_sec
-        cuts = _scan_slice_transitions(video_path, t_start, slice_dur, threshold, black_min_dur)
-        matches = [c for c in cuts if c.timestamp > current_time + 0.05]
-        if matches:
-            return matches[0]
-        # Expand window if not found
-        exp_start = current_time + window_sec
-        exp_cuts = _scan_slice_transitions(video_path, exp_start, window_sec * 2.0, threshold, black_min_dur)
-        exp_matches = [c for c in exp_cuts if c.timestamp > current_time + 0.05]
-        if exp_matches:
-            return exp_matches[0]
+        for win in windows:
+            t_start = current_time
+            cuts = _scan_slice_transitions(video_path, t_start, win, threshold, black_min_dur)
+            matches = [c for c in cuts if c.timestamp > current_time + 0.05]
+            if matches:
+                return matches[0]
+            if len(cuts) == 0 and win == windows[-1]:
+                soft_cuts = _scan_slice_transitions(video_path, t_start, win, max(0.08, threshold * 0.7), black_min_dur)
+                soft_matches = [c for c in soft_cuts if c.timestamp > current_time + 0.05]
+                if soft_matches:
+                    return soft_matches[0]
     return None
