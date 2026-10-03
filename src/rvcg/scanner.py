@@ -147,6 +147,7 @@ def scan_keyframes(
     def run_chunk(spec: ChunkSpec) -> Path | None:
         chunk_dur = max(0.1, spec.t_end - spec.t_start)
         th = config.scene_threshold
+        bd = max(0.05, config.black_min_dur)
         if skip_boundary_scan and spec.strip_path is not None:
             cmd = [
                 "ffmpeg",
@@ -178,7 +179,7 @@ def scan_keyframes(
         elif spec.strip_path is not None:
             fc = (
                 f"[0:v]scale=240:135:flags=fast_bilinear,split=2[vd][vs];"
-                f"[vd]blackdetect=d=0.4:pix_th=0.12:pic_th=0.82,select='gt(scene,{th})',metadata=print:file=-[vnull];"
+                f"[vd]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gt(scene,{th})',metadata=print:file=-[vnull];"
                 f"[vs]fps=1/{interval},tile={cols}x{spec.n_rows}[vspr]"
             )
             cmd = [
@@ -217,7 +218,7 @@ def scan_keyframes(
         else:
             vf = (
                 f"scale=240:135:flags=fast_bilinear,"
-                f"blackdetect=d=0.4:pix_th=0.12:pic_th=0.82,"
+                f"blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,"
                 f"select='gt(scene,{th})',"
                 f"metadata=print:file=-"
             )

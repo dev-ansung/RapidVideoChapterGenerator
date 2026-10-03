@@ -69,3 +69,25 @@ def test_solve_boundaries_preset_and_callback() -> None:
     )
     assert len(segs) == 2
     assert 3 in events and 4 in events and 5 in events
+
+
+def test_solve_boundaries_stage_toggles() -> None:
+    raw = RawScanResult(
+        black_points=[300.0],
+        visual_cuts=[VisualCut(timestamp=600.0, score=0.92)],
+    )
+    black_only_cfg = BoundaryConfig.from_preset("black-fades")
+    assert black_only_cfg.enable_black_fades is True
+    assert black_only_cfg.enable_visual_cuts is False
+    assert black_only_cfg.enable_subdivide is False
+
+    segs_black_only = solve_boundaries(1500.0, raw, black_only_cfg)
+    assert [(s.start_time, s.end_time) for s in segs_black_only] == [(0.0, 300.0), (300.0, 1500.0)]
+
+    visual_only_cfg = BoundaryConfig(
+        enable_black_fades=False,
+        enable_visual_cuts=True,
+        enable_subdivide=False,
+    )
+    segs_visual_only = solve_boundaries(1500.0, raw, visual_only_cfg)
+    assert [(s.start_time, s.end_time) for s in segs_visual_only] == [(0.0, 600.0), (600.0, 1500.0)]

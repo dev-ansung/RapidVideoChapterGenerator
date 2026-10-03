@@ -27,21 +27,25 @@ def place_priority_anchors(
     duration: float,
     raw: RawScanResult,
     min_seg: float,
+    enable_black_fades: bool = True,
+    enable_visual_cuts: bool = True,
 ) -> tuple[list[float], int, int]:
     anchors = [0.0, duration]
     n_black_used = 0
-    for bp in sorted(raw.black_points):
-        if all(abs(bp - a) >= min_seg for a in anchors):
-            anchors.append(bp)
-            anchors.sort()
-            n_black_used += 1
+    if enable_black_fades:
+        for bp in sorted(raw.black_points):
+            if all(abs(bp - a) >= min_seg for a in anchors):
+                anchors.append(bp)
+                anchors.sort()
+                n_black_used += 1
 
     n_visual_used = 0
-    for vc in sorted(raw.visual_cuts, key=lambda x: x.score, reverse=True):
-        if all(abs(vc.timestamp - a) >= min_seg for a in anchors):
-            anchors.append(vc.timestamp)
-            anchors.sort()
-            n_visual_used += 1
+    if enable_visual_cuts:
+        for vc in sorted(raw.visual_cuts, key=lambda x: x.score, reverse=True):
+            if all(abs(vc.timestamp - a) >= min_seg for a in anchors):
+                anchors.append(vc.timestamp)
+                anchors.sort()
+                n_visual_used += 1
 
     return anchors, n_black_used, n_visual_used
 
@@ -139,18 +143,28 @@ def solve_boundaries(
             on_phase(phase, completed, total, info)
 
     emit(3, 0.0, 1.0, "placing anchors...")
-    anchors, n_black, n_visual = place_priority_anchors(duration, raw, config.min_seg)
+    anchors, n_black, n_visual = place_priority_anchors(
+        duration,
+        raw,
+        config.min_seg,
+        enable_black_fades=config.enable_black_fades,
+        enable_visual_cuts=config.enable_visual_cuts,
+    )
     emit(3, 1.0, 1.0, f"{len(anchors)} anchors ({n_black} black, {n_visual} visual)")
 
     emit(4, 0.0, 1.0, "checking gaps...")
-    cuts, n_sub, n_snapped = subdivide_long_gaps(
-        anchors=anchors,
-        visual_cuts=raw.visual_cuts,
-        min_seg=config.min_seg,
-        max_seg=config.max_seg,
-        target_seg=config.target_seg,
-    )
-    emit(4, 1.0, 1.0, f"+{n_sub} sub-cuts ({n_snapped} snapped to visual cuts)")
+    if config.enable_subdivide:
+        cuts, n_sub, n_snapped = subdivide_long_gaps(
+            anchors=anchors,
+            visual_cuts=raw.visual_cuts if config.enable_visual_cuts else [],
+            min_seg=config.min_seg,
+            max_seg=config.max_seg,
+            target_seg=config.target_seg,
+        )
+        emit(4, 1.0, 1.0, f"+{n_sub} sub-cuts ({n_snapped} snapped to visual cuts)")
+    else:
+        cuts = [round(a, 2) for a in anchors]
+        emit(4, 1.0, 1.0, "skipped (subdivide off)")
 
     emit(5, 0.0, 1.0, "merging & sampling...")
     segments = merge_and_sample(

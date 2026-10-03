@@ -321,6 +321,14 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 target_seg=safe_float(payload.get("target_seg")) or self.server.default_config.target_seg,
                 workers=max(1, int(safe_float(payload.get("workers")) or self.server.default_config.workers)),
                 scene_threshold=safe_float(payload.get("threshold")) or self.server.default_config.scene_threshold,
+                black_min_dur=safe_float(payload.get("black_min_dur")) or self.server.default_config.black_min_dur,
+                enable_black_fades=bool(
+                    payload.get("enable_black_fades", self.server.default_config.enable_black_fades)
+                ),
+                enable_visual_cuts=bool(
+                    payload.get("enable_visual_cuts", self.server.default_config.enable_visual_cuts)
+                ),
+                enable_subdivide=bool(payload.get("enable_subdivide", self.server.default_config.enable_subdivide)),
             )
             job_id = uuid.uuid4().hex[:12]
             job = ScanJob(job_id=job_id, video_path=vid_path)

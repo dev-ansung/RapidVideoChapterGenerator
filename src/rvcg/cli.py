@@ -143,10 +143,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--preset",
-        choices=["default", "podcast", "presentation", "action"],
+        choices=["default", "black-fades", "podcast", "presentation", "action"],
         default="default",
         help="Predefined detection sensitivity profile",
     )
+    parser.add_argument(
+        "--black-min-dur",
+        type=float,
+        default=None,
+        help="Minimum black-fade duration in seconds for Stage 1 (default: 0.4)",
+    )
+    parser.add_argument(
+        "--black-only",
+        action="store_true",
+        help="Only split chapters at detected black fades (disables Stage 2 visual cuts and Stage 3 subdivision)",
+    )
+    parser.add_argument("--no-black-fades", action="store_true", help="Disable Stage 1 black-fade anchors")
+    parser.add_argument("--no-visual-cuts", action="store_true", help="Disable Stage 2 visual-cut anchors")
+    parser.add_argument("--no-subdivide", action="store_true", help="Disable Stage 3 long-segment subdivision")
     parser.add_argument("-w", "--workers", type=int, default=8, help="Parallel FFmpeg keyframe worker count")
     parser.add_argument(
         "-o", "--output", type=Path, default=None, help="Destination file path (defaults to atomic in-place update)"
@@ -184,12 +198,22 @@ def resolve_config(args: argparse.Namespace) -> BoundaryConfig:
     cfg = BoundaryConfig.from_preset(str(args.preset))
     if args.threshold is not None:
         cfg = replace(cfg, scene_threshold=float(args.threshold))
+    if args.black_min_dur is not None:
+        cfg = replace(cfg, black_min_dur=max(0.05, float(args.black_min_dur)))
     if args.min_scene_len is not None:
         cfg = replace(cfg, min_seg=parse_duration_sec(str(args.min_scene_len)))
     if args.max_scene_len is not None:
         cfg = replace(cfg, max_seg=parse_duration_sec(str(args.max_scene_len)))
     if args.target_scene_len is not None:
         cfg = replace(cfg, target_seg=parse_duration_sec(str(args.target_scene_len)))
+    if args.black_only:
+        cfg = replace(cfg, enable_black_fades=True, enable_visual_cuts=False, enable_subdivide=False)
+    if args.no_black_fades:
+        cfg = replace(cfg, enable_black_fades=False)
+    if args.no_visual_cuts:
+        cfg = replace(cfg, enable_visual_cuts=False)
+    if args.no_subdivide:
+        cfg = replace(cfg, enable_subdivide=False)
     cfg = replace(
         cfg,
         workers=max(1, int(args.workers)),

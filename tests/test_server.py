@@ -75,8 +75,11 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             assert ">Embed Chapters<" in html
             assert "Split Scene" in html
             assert "Export Scene" in html
-            assert html.count('class="field-group" data-tippy-content=') == 6
-            assert 'tippy(document.querySelectorAll(".settings-row .field-group")' in html
+            assert 'id="cfg-enable-black"' in html
+            assert 'id="cfg-black-dur"' in html
+            assert 'id="cfg-enable-visual"' in html
+            assert 'id="cfg-enable-sub"' in html
+            assert 'value="black-fades"' in html
             assert "function isInPip()" in html
             assert "if (!isInPip())" in html
 

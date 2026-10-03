@@ -29,11 +29,17 @@ class BoundaryConfig:
     target_seg: float = 360.0
     workers: int = 8
     scene_threshold: float = 0.38
+    black_min_dur: float = 0.4
+    enable_black_fades: bool = True
+    enable_visual_cuts: bool = True
+    enable_subdivide: bool = True
     card_dur: float = 8.4
     title_template: str = "Scene {n:02d}"
 
     @classmethod
     def from_preset(cls, preset: str) -> "BoundaryConfig":
+        if preset == "black-fades":
+            return cls(enable_black_fades=True, enable_visual_cuts=False, enable_subdivide=False)
         if preset == "podcast":
             return cls(min_seg=120.0, max_seg=900.0, target_seg=450.0, scene_threshold=0.45)
         if preset == "presentation":

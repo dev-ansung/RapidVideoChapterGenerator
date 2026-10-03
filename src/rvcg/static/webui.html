@@ -104,13 +104,51 @@
     gap: 8px;
     align-items: center;
   }
+  .settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
   .settings-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
-    padding-top: 8px;
-    border-top: 1px solid var(--border);
+  }
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+  }
+  .stage-card {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: opacity 0.12s ease, border-color 0.12s ease;
+  }
+  .stage-card.disabled {
+    opacity: 0.48;
+  }
+  .stage-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .stage-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
   }
   .field-group {
     display: flex;
@@ -121,6 +159,10 @@
   }
   .field-group input {
     width: 66px;
+  }
+  .field-group input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   .file-grid {
     display: flex;
@@ -629,30 +671,59 @@
       <button type="button" id="go-path-btn" class="primary">Open</button>
     </div>
     <div id="file-grid" class="file-grid"></div>
-    <div class="settings-row">
-      <label class="field-group" data-tippy-content="Predefined detection profile (default, podcast, presentation, action) that sets Min, Max, Target, and Threshold.">Preset
-        <select id="preset-select">
-          <option value="default">default</option>
-          <option value="podcast">podcast</option>
-          <option value="presentation">presentation</option>
-          <option value="action">action</option>
-        </select>
-      </label>
-      <label class="field-group" data-tippy-content="Minimum allowed chapter duration in seconds. Suppresses cuts closer than this gap and merges short trailing segments.">Min (s)
-        <input id="cfg-min" class="text-input" type="number" step="10" />
-      </label>
-      <label class="field-group" data-tippy-content="Maximum chapter duration in seconds before automatic long-gap subdivision is triggered.">Max (s)
-        <input id="cfg-max" class="text-input" type="number" step="10" />
-      </label>
-      <label class="field-group" data-tippy-content="Target chapter length in seconds when subdividing segments that exceed Max (s).">Target (s)
-        <input id="cfg-target" class="text-input" type="number" step="10" />
-      </label>
-      <label class="field-group" data-tippy-content="Visual cut sensitivity (0.05–0.95). Lower values detect subtler visual changes; higher values require sharper transitions.">Threshold
-        <input id="cfg-th" class="text-input" type="number" step="0.02" min="0.05" max="0.95" />
-      </label>
-      <label class="field-group" data-tippy-content="Parallel FFmpeg worker count (1–16) used during keyframe visual scanning.">Workers
-        <input id="cfg-workers" class="text-input" type="number" step="1" min="1" max="16" />
-      </label>
+    <div class="settings-panel">
+      <div class="settings-row">
+        <label class="field-group" data-tippy-content="Predefined pipeline profile (default, black-fades, podcast, presentation, action) that configures stages and thresholds.">Preset
+          <select id="preset-select">
+            <option value="default">default</option>
+            <option value="black-fades">black-fades</option>
+            <option value="podcast">podcast</option>
+            <option value="presentation">presentation</option>
+            <option value="action">action</option>
+          </select>
+        </label>
+        <label class="field-group" data-tippy-content="Minimum allowed chapter duration in seconds across all stages. Suppresses cuts closer than this gap and merges short trailing segments.">Min Scene (s)
+          <input id="cfg-min" class="text-input" type="number" step="10" />
+        </label>
+        <label class="field-group" data-tippy-content="Parallel FFmpeg worker count (1–16) used during keyframe visual scanning.">Workers
+          <input id="cfg-workers" class="text-input" type="number" step="1" min="1" max="16" />
+        </label>
+      </div>
+      <div class="pipeline-grid">
+        <div id="stage-black" class="stage-card" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black transitions.">
+          <label class="stage-toggle">
+            <input id="cfg-enable-black" type="checkbox" checked /> 1. Black Fades
+          </label>
+          <div class="stage-fields">
+            <label class="field-group" data-tippy-content="Minimum fade-to-black duration in seconds required to register a black-fade cut.">Min Fade (s)
+              <input id="cfg-black-dur" class="text-input" type="number" step="0.1" min="0.1" max="5.0" />
+            </label>
+          </div>
+        </div>
+        <div id="stage-visual" class="stage-card" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
+          <label class="stage-toggle">
+            <input id="cfg-enable-visual" type="checkbox" checked /> 2. Visual Cuts
+          </label>
+          <div class="stage-fields">
+            <label class="field-group" data-tippy-content="Visual cut sensitivity (0.05–0.95). Lower values detect subtler changes; higher values require sharper transitions.">Threshold
+              <input id="cfg-th" class="text-input" type="number" step="0.02" min="0.05" max="0.95" />
+            </label>
+          </div>
+        </div>
+        <div id="stage-subdivide" class="stage-card" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
+          <label class="stage-toggle">
+            <input id="cfg-enable-sub" type="checkbox" checked /> 3. Subdivide Long
+          </label>
+          <div class="stage-fields">
+            <label class="field-group" data-tippy-content="Maximum chapter duration in seconds before automatic subdivision is triggered.">Max (s)
+              <input id="cfg-max" class="text-input" type="number" step="10" />
+            </label>
+            <label class="field-group" data-tippy-content="Target chapter length in seconds when subdividing chapters longer than Max (s).">Target (s)
+              <input id="cfg-target" class="text-input" type="number" step="10" />
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -759,35 +830,80 @@ const nowBadge = document.getElementById("now-badge");
 const nowTitle = document.getElementById("now-title");
 const nowRange = document.getElementById("now-range");
 
+const cfgEnableBlack = document.getElementById("cfg-enable-black");
+const cfgBlackDur = document.getElementById("cfg-black-dur");
+const cfgEnableVisual = document.getElementById("cfg-enable-visual");
+const cfgTh = document.getElementById("cfg-th");
+const cfgEnableSub = document.getElementById("cfg-enable-sub");
+const cfgMax = document.getElementById("cfg-max");
+const cfgTarget = document.getElementById("cfg-target");
+
 document.getElementById("cfg-min").value = DEFAULT_CFG.min_seg;
-document.getElementById("cfg-max").value = DEFAULT_CFG.max_seg;
-document.getElementById("cfg-target").value = DEFAULT_CFG.target_seg;
-document.getElementById("cfg-th").value = DEFAULT_CFG.threshold;
+cfgMax.value = DEFAULT_CFG.max_seg;
+cfgTarget.value = DEFAULT_CFG.target_seg;
+cfgTh.value = DEFAULT_CFG.threshold;
+cfgBlackDur.value = DEFAULT_CFG.black_min_dur ?? 0.4;
+cfgEnableBlack.checked = DEFAULT_CFG.enable_black_fades ?? true;
+cfgEnableVisual.checked = DEFAULT_CFG.enable_visual_cuts ?? true;
+cfgEnableSub.checked = DEFAULT_CFG.enable_subdivide ?? true;
 document.getElementById("cfg-workers").value = DEFAULT_CFG.workers;
+
+function syncStageUI() {
+  const bOn = cfgEnableBlack.checked;
+  const vOn = cfgEnableVisual.checked;
+  const sOn = cfgEnableSub.checked;
+  document.getElementById("stage-black").classList.toggle("disabled", !bOn);
+  cfgBlackDur.disabled = !bOn;
+  document.getElementById("stage-visual").classList.toggle("disabled", !vOn);
+  cfgTh.disabled = !vOn;
+  document.getElementById("stage-subdivide").classList.toggle("disabled", !sOn);
+  cfgMax.disabled = !sOn;
+  cfgTarget.disabled = !sOn;
+}
+
+[cfgEnableBlack, cfgEnableVisual, cfgEnableSub].forEach((el) => {
+  el.addEventListener("change", syncStageUI);
+});
+syncStageUI();
 
 document.getElementById("preset-select").addEventListener("change", (e) => {
   const p = e.target.value;
-  if (p === "podcast") {
+  cfgEnableBlack.checked = true;
+  cfgBlackDur.value = 0.4;
+  if (p === "black-fades") {
+    document.getElementById("cfg-min").value = 180;
+    cfgEnableVisual.checked = false;
+    cfgEnableSub.checked = false;
+  } else if (p === "podcast") {
     document.getElementById("cfg-min").value = 120;
-    document.getElementById("cfg-max").value = 900;
-    document.getElementById("cfg-target").value = 450;
-    document.getElementById("cfg-th").value = 0.45;
+    cfgMax.value = 900;
+    cfgTarget.value = 450;
+    cfgTh.value = 0.45;
+    cfgEnableVisual.checked = true;
+    cfgEnableSub.checked = true;
   } else if (p === "presentation") {
     document.getElementById("cfg-min").value = 60;
-    document.getElementById("cfg-max").value = 600;
-    document.getElementById("cfg-target").value = 300;
-    document.getElementById("cfg-th").value = 0.30;
+    cfgMax.value = 600;
+    cfgTarget.value = 300;
+    cfgTh.value = 0.30;
+    cfgEnableVisual.checked = true;
+    cfgEnableSub.checked = true;
   } else if (p === "action") {
     document.getElementById("cfg-min").value = 90;
-    document.getElementById("cfg-max").value = 420;
-    document.getElementById("cfg-target").value = 240;
-    document.getElementById("cfg-th").value = 0.35;
+    cfgMax.value = 420;
+    cfgTarget.value = 240;
+    cfgTh.value = 0.35;
+    cfgEnableVisual.checked = true;
+    cfgEnableSub.checked = true;
   } else {
     document.getElementById("cfg-min").value = 180;
-    document.getElementById("cfg-max").value = 600;
-    document.getElementById("cfg-target").value = 360;
-    document.getElementById("cfg-th").value = 0.38;
+    cfgMax.value = 600;
+    cfgTarget.value = 360;
+    cfgTh.value = 0.38;
+    cfgEnableVisual.checked = true;
+    cfgEnableSub.checked = true;
   }
+  syncStageUI();
 });
 
 const player = videojs("vjs-player", {
@@ -1018,9 +1134,13 @@ async function startScan(videoPath, forceRefresh) {
     path: videoPath,
     refresh: Boolean(forceRefresh),
     min_seg: Number(document.getElementById("cfg-min").value || 180),
-    max_seg: Number(document.getElementById("cfg-max").value || 600),
-    target_seg: Number(document.getElementById("cfg-target").value || 360),
-    threshold: Number(document.getElementById("cfg-th").value || 0.38),
+    max_seg: Number(cfgMax.value || 600),
+    target_seg: Number(cfgTarget.value || 360),
+    threshold: Number(cfgTh.value || 0.38),
+    black_min_dur: Number(cfgBlackDur.value || 0.4),
+    enable_black_fades: Boolean(cfgEnableBlack.checked),
+    enable_visual_cuts: Boolean(cfgEnableVisual.checked),
+    enable_subdivide: Boolean(cfgEnableSub.checked),
     workers: Number(document.getElementById("cfg-workers").value || 8),
   };
 
@@ -1516,7 +1636,7 @@ document.querySelectorAll(".view-btn").forEach((btn) => {
 });
 
 if (typeof tippy !== "undefined") {
-  tippy(document.querySelectorAll(".settings-row .field-group"), {
+  tippy(document.querySelectorAll(".settings-panel [data-tippy-content]"), {
     placement: "top",
     delay: [60, 0],
     maxWidth: 320,
