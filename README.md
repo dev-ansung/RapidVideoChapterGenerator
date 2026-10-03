@@ -7,6 +7,8 @@
 
 **RapidVideoChapterGenerator** automatically detects scene boundaries and injects native chapter markers into video files at ~3,400× real-time speed. Processing is 100% lossless (`-c copy`), requires zero re-encoding, and works out of the box across QuickTime, IINA, VLC, mpv, Plex, and YouTube.
 
+[![RapidVideoChapterGenerator Demo](docs/demo.gif)](docs/demo.mp4)
+
 ---
 
 ## Key Capabilities
