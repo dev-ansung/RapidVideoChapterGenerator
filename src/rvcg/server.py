@@ -408,8 +408,8 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                     cfg,
                     browser_dir,
                     True,
-                    use_existing,
-                    on_phase,
+                    False,
+                    None if use_existing else on_phase,
                     on_sprite,
                 )
                 sub_fut = ex.submit(extract_subtitles, video_path, browser_dir)
@@ -418,10 +418,12 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
 
             if use_existing:
                 stats = BoundaryStats(
+                    raw_black=len(raw_scan.black_points),
+                    raw_visual=len(raw_scan.visual_cuts),
                     logs=[
                         f"[Embedded] Loaded {len(segments)} existing chapters from container metadata",
                         *[f"[Result] #{s.id_str} {s.title}: {s.source_range} ({s.duration_str})" for s in segments],
-                    ]
+                    ],
                 )
             else:
                 segments, stats = solve_boundaries_with_stats(duration, raw_scan, cfg, on_phase)
@@ -448,6 +450,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                         "subtitles": [t.to_dict() for t in sub_tracks],
                         "stats": stats.to_dict(),
                         "logs": stats.logs,
+                        "candidates": raw_scan.to_candidates_list(),
                     },
                     ensure_ascii=False,
                 )

@@ -110,3 +110,8 @@ def test_solve_boundaries_stage_toggles() -> None:
     assert stats.sub_cuts == 1
     assert any("Black fade" in line for line in stats.logs)
     assert any("Visual cut" in line for line in stats.logs)
+
+    cands = full_raw.to_candidates_list()
+    assert len(cands) == 4
+    assert [c["kind"] for c in cands] == ["black", "black", "visual", "visual"]
+    assert [c["timestamp"] for c in cands] == [300.0, 350.0, 600.0, 1050.0]

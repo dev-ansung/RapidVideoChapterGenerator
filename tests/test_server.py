@@ -86,6 +86,11 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             assert 'id="settings-popover"' in html
             assert 'id="pref-show-cut-dot"' in html
             assert "cut-dot" in html
+            assert 'id="export-scene-dropdown"' in html
+            assert 'id="manual-export-popover"' in html
+            assert 'data-export-mode="chapter"' in html
+            assert 'data-export-mode="nearest"' in html
+            assert 'data-export-mode="manual"' in html
             assert 'value="black-fades"' in html
             assert "function isInPip()" in html
             assert "if (!isInPip())" in html
@@ -214,6 +219,7 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
         assert isinstance(stats_obj, dict)
         assert "used_black" in stats_obj
         assert isinstance(complete_evs[0].get("logs"), list)
+        assert isinstance(complete_evs[0].get("candidates"), list)
     finally:
         server.shutdown()
         server.server_close()

@@ -597,7 +597,7 @@
     background: var(--panel);
     color: var(--text);
     box-shadow: 0 22px 60px rgba(0, 0, 0, 0.88);
-    overflow: hidden;
+    overflow: visible;
     touch-action: none;
     user-select: none;
   }
@@ -609,6 +609,7 @@
     padding: 7px 11px;
     background: #0e1017;
     border-bottom: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
     cursor: grab;
   }
   .popover-header:active {
@@ -650,6 +651,8 @@
     width: 100%;
     aspect-ratio: 16 / 9;
     background: #000;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
   }
   .video-js {
     width: 100% !important;
@@ -684,7 +687,8 @@
   }
 
   #export-popover,
-  #settings-popover {
+  #settings-popover,
+  #manual-export-popover {
     border: 1px solid var(--border);
     border-radius: 9px;
     background: var(--panel);
@@ -698,8 +702,12 @@
   #settings-popover {
     width: min(88vw, 420px);
   }
+  #manual-export-popover {
+    width: min(94vw, 860px);
+  }
   #export-popover::backdrop,
-  #settings-popover::backdrop {
+  #settings-popover::backdrop,
+  #manual-export-popover::backdrop {
     background: rgba(0, 0, 0, 0.78);
     backdrop-filter: blur(4px);
   }
@@ -740,6 +748,171 @@
     align-items: center;
     gap: 8px;
   }
+  .trim-modal-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 84vh;
+    overflow-y: auto;
+  }
+  .trim-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .trim-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+  }
+  .trim-col-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .trim-col-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .trim-cand-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 7px;
+  }
+  .trim-cand-card {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    padding: 0;
+    transition: border-color 0.12s ease;
+  }
+  .trim-cand-card:hover,
+  .trim-cand-card.selected {
+    border-color: var(--accent);
+    background: #141926;
+  }
+  .trim-cand-thumb {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: #050608;
+    background-repeat: no-repeat;
+    overflow: hidden;
+  }
+  .trim-cand-thumb video,
+  .trim-preview-thumb video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+  .trim-cand-delta {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.78);
+    color: #fff;
+    font-family: Menlo, monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+  }
+  .trim-cand-meta {
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .trim-cand-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .trim-cand-ts {
+    font-family: Menlo, monospace;
+    font-weight: 700;
+    color: var(--text);
+    font-size: 10.5px;
+  }
+  .trim-cand-label {
+    font-size: 9.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .trim-fine-box {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+  .trim-preview-thumb {
+    width: 104px;
+    aspect-ratio: 16 / 9;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background-color: #050608;
+    background-repeat: no-repeat;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .trim-fine-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 0;
+  }
+  .trim-nudge-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .trim-nudge-btns button {
+    padding: 2px 6px;
+    font-size: 10.5px;
+  }
+  .trim-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 12px;
+  }
+  .trim-footer-inputs {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 10px;
+  }
+  .trim-footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
   .export-textarea {
     width: 100%;
     height: 300px;
@@ -776,6 +949,10 @@
     }
     .phase-bar-bg, .phase-info {
       grid-column: 1 / -1;
+    }
+    .trim-columns,
+    .trim-footer-inputs {
+      grid-template-columns: 1fr;
     }
   }
 </style>
@@ -918,7 +1095,14 @@
     </div>
     <div class="toolbar-right">
       <button id="split-here-btn" class="primary" type="button">✂ Split Scene</button>
-      <button id="export-scene-btn" type="button">⬇ Export Scene</button>
+      <div class="menu-wrap">
+        <button id="export-scene-btn" type="button">⬇ Export Scene ▾</button>
+        <div id="export-scene-dropdown" class="dropdown-menu hidden">
+          <button type="button" data-export-mode="chapter">Export Entire Chapter</button>
+          <button type="button" data-export-mode="nearest">Export Nearest Scene</button>
+          <button type="button" data-export-mode="manual">Export Manually...</button>
+        </div>
+      </div>
       <button id="close-player-btn" type="button">✕</button>
     </div>
   </div>
@@ -936,6 +1120,83 @@
     </div>
   </div>
   <textarea id="export-textarea" class="export-textarea" readonly></textarea>
+</dialog>
+
+<dialog id="manual-export-popover">
+  <div class="popover-header">
+    <span class="popover-title">Export Scene Manually — Trim Assistant</span>
+    <div class="toolbar-right">
+      <span id="manual-playhead-label" class="popover-range"></span>
+      <button id="close-manual-export" type="button">✕</button>
+    </div>
+  </div>
+  <div class="trim-modal-body">
+    <div class="trim-columns">
+      <div class="trim-col">
+        <div class="trim-col-head">
+          <span>Suggested Start Points</span>
+          <span class="trim-col-sub">Before playhead</span>
+        </div>
+        <div id="manual-start-cands" class="trim-cand-grid"></div>
+        <div class="trim-fine-box">
+          <div id="manual-start-thumb" class="trim-preview-thumb"></div>
+          <div class="trim-fine-controls">
+            <label class="field-group">Start Timestamp (HH:MM:SS.mmm or sec)
+              <input id="manual-start-input" class="text-input" style="width:100%;" />
+            </label>
+            <div class="trim-nudge-btns">
+              <button type="button" data-nudge-start="-1">-1s</button>
+              <button type="button" data-nudge-start="-0.1">-0.1s</button>
+              <button type="button" data-nudge-start="0.1">+0.1s</button>
+              <button type="button" data-nudge-start="1">+1s</button>
+              <button type="button" id="manual-start-playhead-btn">Use Playhead</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trim-col">
+        <div class="trim-col-head">
+          <span>Suggested End Points</span>
+          <span class="trim-col-sub">After playhead</span>
+        </div>
+        <div id="manual-end-cands" class="trim-cand-grid"></div>
+        <div class="trim-fine-box">
+          <div id="manual-end-thumb" class="trim-preview-thumb"></div>
+          <div class="trim-fine-controls">
+            <label class="field-group">End Timestamp (HH:MM:SS.mmm or sec)
+              <input id="manual-end-input" class="text-input" style="width:100%;" />
+            </label>
+            <div class="trim-nudge-btns">
+              <button type="button" data-nudge-end="-1">-1s</button>
+              <button type="button" data-nudge-end="-0.1">-0.1s</button>
+              <button type="button" data-nudge-end="0.1">+0.1s</button>
+              <button type="button" data-nudge-end="1">+1s</button>
+              <button type="button" id="manual-end-playhead-btn">Use Playhead</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trim-footer">
+      <div class="trim-footer-inputs">
+        <label class="field-group">Scene Title
+          <input id="manual-title-input" class="text-input" style="width:100%;" />
+        </label>
+        <label class="field-group">Output File Path
+          <input id="manual-path-input" class="text-input" style="width:100%;" />
+        </label>
+      </div>
+      <div class="trim-footer-actions">
+        <span id="manual-dur-label" class="count-label"></span>
+        <div class="toolbar-right">
+          <button id="manual-preview-btn" type="button">▶ Preview Start in Player</button>
+          <button id="run-manual-export-btn" class="primary" type="button">⬇ Export Trim</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="settings-popover">
@@ -971,6 +1232,7 @@ let currentVideoPath = __INIT_VID__;
 let VIDEO_SRC = "";
 let SPRITE = { url: "", interval: 10, cols: 10, rows: 1, total_frames: 1 };
 let CUTS = [];
+let RAW_CANDIDATES = [];
 let SUBTITLES = [];
 let currentIndex = -1;
 let searchQuery = "";
@@ -1390,6 +1652,7 @@ async function startScan(videoPath, forceRefresh) {
       VIDEO_SRC = `/api/media?path=${encodeURIComponent(msg.video_path)}`;
       SPRITE = msg.sprite;
       CUTS = msg.chapters;
+      RAW_CANDIDATES = Array.isArray(msg.candidates) ? msg.candidates : [];
       SUBTITLES = msg.subtitles || [];
       LAST_STATS = msg.stats || null;
       if (LAST_STATS) {
@@ -1748,44 +2011,465 @@ document.getElementById("split-here-btn").addEventListener("click", () => {
   syncChaptersEdit(next);
 });
 
-document.getElementById("export-scene-btn").addEventListener("click", async () => {
-  if (!currentVideoPath || !CUTS.length) return;
-  let idx = currentIndex;
-  if (idx < 0 || idx >= CUTS.length) {
-    const t = player.currentTime();
-    idx = CUTS.findIndex((c) => t >= c.start_time && t < c.end_time);
-  }
-  if (idx < 0 || idx >= CUTS.length) idx = 0;
-  const item = CUTS[idx];
-  const slug = fmtHms(item.start_time).replace(/:/g, "-");
-  const baseStem = currentVideoPath.replace(/\.[^/.]+$/, "");
-  const defaultOut = `${baseStem}_cuts/cut_${item.id}_${slug}.mp4`;
-  const targetOut = window.prompt("Save exported scene to:", defaultOut);
-  if (!targetOut || !targetOut.trim()) return;
+const exportSceneBtn = document.getElementById("export-scene-btn");
+const exportSceneDropdown = document.getElementById("export-scene-dropdown");
+const manualExportPopover = document.getElementById("manual-export-popover");
+const manualStartCandsEl = document.getElementById("manual-start-cands");
+const manualEndCandsEl = document.getElementById("manual-end-cands");
+const manualStartInput = document.getElementById("manual-start-input");
+const manualEndInput = document.getElementById("manual-end-input");
+const manualStartThumb = document.getElementById("manual-start-thumb");
+const manualEndThumb = document.getElementById("manual-end-thumb");
+const manualTitleInput = document.getElementById("manual-title-input");
+const manualPathInput = document.getElementById("manual-path-input");
+const manualDurLabel = document.getElementById("manual-dur-label");
+const manualPlayheadLabel = document.getElementById("manual-playhead-label");
 
-  const btn = document.getElementById("export-scene-btn");
-  const origText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Exporting...";
-  setStatus(`Exporting #${item.id}...`, false);
+function getTotalDuration() {
+  return player.duration() || (CUTS.length ? CUTS[CUTS.length - 1].end_time : 0);
+}
+
+function getActiveChapterAt(t) {
+  if (!CUTS.length) {
+    return {
+      id: "01",
+      scene_number: 1,
+      start_time: 0,
+      end_time: Math.max(1, getTotalDuration()),
+      title: "Scene 01",
+      card_dur: 8.4,
+    };
+  }
+  let idx = CUTS.findIndex((c) => t >= c.start_time && t < c.end_time);
+  if (idx === -1) idx = currentIndex >= 0 && currentIndex < CUTS.length ? currentIndex : 0;
+  return CUTS[idx];
+}
+
+function getActiveCandidateCuts() {
+  const bOn = cfgEnableBlack.checked;
+  const vOn = cfgEnableVisual.checked;
+  const th = Number(cfgTh.value || 0.38);
+  const out = [];
+
+  RAW_CANDIDATES.forEach((c) => {
+    const ts = Number(c.timestamp || 0);
+    const sc = Number(c.score || 0);
+    if (c.kind === "black" && bOn) {
+      out.push({
+        timestamp: ts,
+        kind: "black",
+        score: 2.0,
+        detail: c.detail || `Black fade @ ${fmtHms(ts)}`,
+        label: "Black Fade",
+      });
+    } else if (c.kind === "visual" && vOn && sc >= th) {
+      out.push({
+        timestamp: ts,
+        kind: "visual",
+        score: sc,
+        detail: c.detail || `Visual cut @ ${fmtHms(ts)} (score=${sc.toFixed(3)})`,
+        label: `Visual ${sc.toFixed(2)}`,
+      });
+    }
+  });
+
+  CUTS.forEach((ch) => {
+    if (!out.some((x) => Math.abs(x.timestamp - ch.start_time) < 0.4)) {
+      out.push({
+        timestamp: ch.start_time,
+        kind: ch.cut_kind || "start",
+        score: 1.5,
+        detail: ch.cut_detail || `Chapter #${ch.id} start @ ${fmtHms(ch.start_time)}`,
+        label: `Chapter #${ch.id}`,
+      });
+    }
+  });
+
+  const totalDur = getTotalDuration();
+  if (totalDur > 0 && !out.some((x) => Math.abs(x.timestamp - totalDur) < 0.4)) {
+    out.push({
+      timestamp: Math.round(totalDur * 100) / 100,
+      kind: "start",
+      score: 1.5,
+      detail: `Video end @ ${fmtHms(totalDur)}`,
+      label: "Video End",
+    });
+  }
+
+  out.sort((a, b) => a.timestamp - b.timestamp);
+  return out;
+}
+
+function getNearestSceneAt(playheadT) {
+  const chap = getActiveChapterAt(playheadT);
+  const cands = getActiveCandidateCuts();
+  const before = cands.filter((c) => c.timestamp <= playheadT - 0.3);
+  const startT = before.length ? before[before.length - 1].timestamp : chap.start_time;
+  const after = cands.filter((c) => c.timestamp >= Math.max(playheadT + 0.3, startT + 1.0));
+  const endT = after.length ? after[0].timestamp : Math.max(startT + 1.0, chap.end_time);
+  return {
+    id: chap.id || "01",
+    scene_number: chap.scene_number || 1,
+    start_time: Math.round(startT * 100) / 100,
+    end_time: Math.round(endT * 100) / 100,
+    title: chap.title || "Scene 01",
+    card_dur: chap.card_dur || 8.4,
+  };
+}
+
+function buildDefaultExportPath(sceneObj, prefix = "cut") {
+  const slug = fmtHms(sceneObj.start_time).replace(/:/g, "-");
+  const baseStem = currentVideoPath.replace(/\.[^/.]+$/, "");
+  return `${baseStem}_cuts/${prefix}_${sceneObj.id || "01"}_${slug}.mp4`;
+}
+
+async function executeSceneExport(sceneObj, targetOut, btnEl) {
+  if (!currentVideoPath || !targetOut || !targetOut.trim()) return false;
+  const origText = btnEl.textContent;
+  btnEl.disabled = true;
+  btnEl.textContent = "Exporting...";
+  setStatus(`Exporting ${fmtHms(sceneObj.start_time)}–${fmtHms(sceneObj.end_time)}...`, false);
   try {
     const res = await fetch("/api/chapters/export-scene", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: currentVideoPath, scene: item, output_path: targetOut.trim() }),
+      body: JSON.stringify({ path: currentVideoPath, scene: sceneObj, output_path: targetOut.trim() }),
     });
     const data = await res.json();
     if (data.ok) {
       setStatus(`✓ Exported: ${data.path}`, false);
-    } else {
-      setStatus(`Export failed: ${data.error || "error"}`, true);
+      return true;
     }
-  } catch (err) {
+    setStatus(`Export failed: ${data.error || "error"}`, true);
+    return false;
+  } catch (_) {
     setStatus("Export failed", true);
+    return false;
   } finally {
-    btn.disabled = false;
-    btn.textContent = origText;
+    btnEl.disabled = false;
+    btnEl.textContent = origText;
   }
+}
+
+async function promptAndExportScene(sceneObj, prefix = "cut") {
+  const defaultOut = buildDefaultExportPath(sceneObj, prefix);
+  const targetOut = window.prompt("Save exported scene to:", defaultOut);
+  if (!targetOut || !targetOut.trim()) return;
+  await executeSceneExport(sceneObj, targetOut, exportSceneBtn);
+}
+
+function parseTimeInput(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return NaN;
+  if (/^\d+(\.\d+)?$/.test(s)) return Number(s);
+  const parts = s.split(":").map(Number);
+  if (parts.some((n) => Number.isNaN(n) || n < 0)) return NaN;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return NaN;
+}
+
+function attachHoverPreviewVideo(thumbEl, getTimeFn) {
+  let vEl = null;
+  thumbEl.addEventListener("mouseenter", () => {
+    if (vEl || !VIDEO_SRC) return;
+    const t = Math.max(0, Number(getTimeFn() || 0));
+    vEl = document.createElement("video");
+    vEl.src = VIDEO_SRC;
+    vEl.muted = true;
+    vEl.playsInline = true;
+    vEl.preload = "auto";
+    vEl.addEventListener("loadedmetadata", () => {
+      if (!vEl) return;
+      vEl.currentTime = t;
+    });
+    thumbEl.appendChild(vEl);
+  });
+  thumbEl.addEventListener("mouseleave", () => {
+    if (!vEl) return;
+    vEl.pause();
+    vEl.removeAttribute("src");
+    vEl.load();
+    vEl.remove();
+    vEl = null;
+  });
+}
+
+attachHoverPreviewVideo(manualStartThumb, () => parseTimeInput(manualStartInput.value));
+attachHoverPreviewVideo(manualEndThumb, () => parseTimeInput(manualEndInput.value));
+
+let manualPathTouched = false;
+let manualPlayheadRef = 0;
+
+function pickTopCandidates(pool, mustIncludeTimes, playheadT, maxCount = 6) {
+  const chosen = [];
+  const addUnique = (cand) => {
+    if (!cand) return;
+    if (chosen.some((x) => Math.abs(x.timestamp - cand.timestamp) < 0.35)) return;
+    chosen.push(cand);
+  };
+  mustIncludeTimes.forEach((t) => {
+    const match = pool.find((c) => Math.abs(c.timestamp - t) < 0.35);
+    if (match) addUnique(match);
+  });
+  const ranked = [...pool].sort((a, b) => {
+    const distA = Math.abs(a.timestamp - playheadT);
+    const distB = Math.abs(b.timestamp - playheadT);
+    const rankA = distA / (1 + a.score * 1.5);
+    const rankB = distB / (1 + b.score * 1.5);
+    return rankA - rankB;
+  });
+  for (const c of ranked) {
+    if (chosen.length >= maxCount) break;
+    addUnique(c);
+  }
+  chosen.sort((a, b) => a.timestamp - b.timestamp);
+  return chosen;
+}
+
+function syncManualTrimUI(updateInputs = false) {
+  const totalDur = getTotalDuration() || 36000;
+  let s = parseTimeInput(manualStartInput.value);
+  let e = parseTimeInput(manualEndInput.value);
+  if (Number.isNaN(s)) s = 0;
+  if (Number.isNaN(e)) e = Math.max(s + 1, totalDur);
+  s = Math.max(0, Math.min(totalDur - 0.5, s));
+  e = Math.max(s + 0.5, Math.min(totalDur, e));
+
+  if (updateInputs) {
+    manualStartInput.value = fmtHmsMs(s);
+    manualEndInput.value = fmtHmsMs(e);
+  }
+
+  setCellSpriteFrame(manualStartThumb, s);
+  setCellSpriteFrame(manualEndThumb, Math.max(0, e - 0.2));
+
+  manualStartCandsEl.querySelectorAll(".trim-cand-card").forEach((el) => {
+    el.classList.toggle("selected", Math.abs(Number(el.dataset.ts) - s) < 0.25);
+  });
+  manualEndCandsEl.querySelectorAll(".trim-cand-card").forEach((el) => {
+    el.classList.toggle("selected", Math.abs(Number(el.dataset.ts) - e) < 0.25);
+  });
+
+  const dur = Math.max(0.5, e - s);
+  manualDurLabel.textContent = `Trim Range: ${fmtHmsMs(s)} – ${fmtHmsMs(e)} (${dur.toFixed(1)}s)`;
+
+  if (!manualPathTouched) {
+    const chap = getActiveChapterAt(manualPlayheadRef);
+    manualPathInput.value = buildDefaultExportPath(
+      { id: chap.id || "01", start_time: s },
+      "trim"
+    );
+  }
+}
+
+function renderCandidateCards(containerEl, cands, playheadT, onSelect) {
+  containerEl.innerHTML = "";
+  cands.forEach((cand) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "trim-cand-card";
+    btn.dataset.ts = cand.timestamp;
+    btn.dataset.tippyContent = cand.detail || cand.label;
+
+    const thumb = document.createElement("div");
+    thumb.className = "trim-cand-thumb";
+    setCellSpriteFrame(thumb, cand.timestamp);
+    attachHoverPreviewVideo(thumb, () => cand.timestamp);
+
+    const delta = cand.timestamp - playheadT;
+    const deltaBadge = document.createElement("span");
+    deltaBadge.className = "trim-cand-delta";
+    deltaBadge.textContent = `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}s`;
+    thumb.appendChild(deltaBadge);
+
+    const meta = document.createElement("div");
+    meta.className = "trim-cand-meta";
+
+    const row = document.createElement("div");
+    row.className = "trim-cand-row";
+    const dot = document.createElement("span");
+    dot.className = `cut-dot cut-${cand.kind || "start"}`;
+    const tsSpan = document.createElement("span");
+    tsSpan.className = "trim-cand-ts";
+    tsSpan.textContent = fmtHms(cand.timestamp);
+    row.appendChild(dot);
+    row.appendChild(tsSpan);
+
+    const lbl = document.createElement("div");
+    lbl.className = "trim-cand-label";
+    lbl.textContent = cand.label;
+
+    meta.appendChild(row);
+    meta.appendChild(lbl);
+
+    btn.appendChild(thumb);
+    btn.appendChild(meta);
+    btn.addEventListener("click", () => onSelect(cand.timestamp));
+    containerEl.appendChild(btn);
+  });
+
+  if (typeof tippy !== "undefined") {
+    tippy(containerEl.querySelectorAll(".trim-cand-card"), {
+      placement: "top",
+      delay: [40, 0],
+      maxWidth: 340,
+      appendTo: () => manualExportPopover,
+    });
+  }
+}
+
+function openManualExportModal() {
+  if (!currentVideoPath || !CUTS.length) return;
+  const playheadT = Math.round((player.currentTime() || 0) * 100) / 100;
+  manualPlayheadRef = playheadT;
+  manualPathTouched = false;
+
+  const chap = getActiveChapterAt(playheadT);
+  const nearest = getNearestSceneAt(playheadT);
+  const allCands = getActiveCandidateCuts();
+
+  const beforePool = allCands.filter((c) => c.timestamp <= playheadT);
+  if (!beforePool.some((c) => Math.abs(c.timestamp - playheadT) < 0.35)) {
+    beforePool.push({
+      timestamp: playheadT,
+      kind: "manual",
+      score: 1.8,
+      detail: `Current playhead @ ${fmtHmsMs(playheadT)}`,
+      label: "Playhead",
+    });
+  }
+  const startCands = pickTopCandidates(
+    beforePool,
+    [nearest.start_time, chap.start_time, playheadT],
+    playheadT,
+    6
+  );
+
+  const afterPool = allCands.filter((c) => c.timestamp >= playheadT);
+  if (!afterPool.some((c) => Math.abs(c.timestamp - playheadT) < 0.35) && playheadT > nearest.start_time + 0.5) {
+    afterPool.push({
+      timestamp: playheadT,
+      kind: "manual",
+      score: 1.8,
+      detail: `Current playhead @ ${fmtHmsMs(playheadT)}`,
+      label: "Playhead",
+    });
+  }
+  const endCands = pickTopCandidates(
+    afterPool,
+    [nearest.end_time, chap.end_time],
+    playheadT,
+    6
+  );
+
+  manualPlayheadLabel.textContent = `Playhead: ${fmtHmsMs(playheadT)}`;
+  manualStartInput.value = fmtHmsMs(nearest.start_time);
+  manualEndInput.value = fmtHmsMs(nearest.end_time);
+  manualTitleInput.value = chap.title || "Scene 01";
+
+  renderCandidateCards(manualStartCandsEl, startCands, playheadT, (ts) => {
+    manualStartInput.value = fmtHmsMs(ts);
+    syncManualTrimUI(true);
+  });
+  renderCandidateCards(manualEndCandsEl, endCands, playheadT, (ts) => {
+    manualEndInput.value = fmtHmsMs(ts);
+    syncManualTrimUI(true);
+  });
+
+  syncManualTrimUI(true);
+  manualExportPopover.showModal();
+}
+
+manualStartInput.addEventListener("change", () => syncManualTrimUI(true));
+manualEndInput.addEventListener("change", () => syncManualTrimUI(true));
+manualPathInput.addEventListener("input", () => {
+  manualPathTouched = true;
+});
+
+document.querySelectorAll("[data-nudge-start]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const delta = Number(btn.dataset.nudgeStart || 0);
+    const cur = parseTimeInput(manualStartInput.value) || 0;
+    manualStartInput.value = fmtHmsMs(Math.max(0, cur + delta));
+    syncManualTrimUI(true);
+  });
+});
+
+document.querySelectorAll("[data-nudge-end]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const delta = Number(btn.dataset.nudgeEnd || 0);
+    const cur = parseTimeInput(manualEndInput.value) || 1;
+    manualEndInput.value = fmtHmsMs(Math.max(0.5, cur + delta));
+    syncManualTrimUI(true);
+  });
+});
+
+document.getElementById("manual-start-playhead-btn").addEventListener("click", () => {
+  manualStartInput.value = fmtHmsMs(player.currentTime() || 0);
+  syncManualTrimUI(true);
+});
+
+document.getElementById("manual-end-playhead-btn").addEventListener("click", () => {
+  manualEndInput.value = fmtHmsMs(player.currentTime() || 1);
+  syncManualTrimUI(true);
+});
+
+document.getElementById("manual-preview-btn").addEventListener("click", () => {
+  const s = parseTimeInput(manualStartInput.value);
+  if (!Number.isNaN(s)) {
+    player.currentTime(Math.max(0, s));
+    player.play().catch(() => {});
+  }
+});
+
+document.getElementById("run-manual-export-btn").addEventListener("click", async () => {
+  const s = parseTimeInput(manualStartInput.value);
+  const e = parseTimeInput(manualEndInput.value);
+  if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return;
+  const chap = getActiveChapterAt(manualPlayheadRef);
+  const sceneObj = {
+    id: chap.id || "01",
+    scene_number: chap.scene_number || 1,
+    start_time: Math.round(s * 100) / 100,
+    end_time: Math.round(e * 100) / 100,
+    title: manualTitleInput.value.trim() || chap.title || "Scene 01",
+    card_dur: chap.card_dur || 8.4,
+  };
+  const ok = await executeSceneExport(
+    sceneObj,
+    manualPathInput.value.trim() || buildDefaultExportPath(sceneObj, "trim"),
+    document.getElementById("run-manual-export-btn")
+  );
+  if (ok) manualExportPopover.close();
+});
+
+document.getElementById("close-manual-export").addEventListener("click", () => {
+  manualExportPopover.close();
+});
+
+exportSceneBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  exportSceneDropdown.classList.toggle("hidden");
+});
+
+exportSceneDropdown.querySelectorAll("button[data-export-mode]").forEach((btn) => {
+  btn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    exportSceneDropdown.classList.add("hidden");
+    if (!currentVideoPath || !CUTS.length) return;
+    const mode = btn.dataset.exportMode;
+    const playheadT = player.currentTime() || 0;
+    if (mode === "chapter") {
+      const chap = getActiveChapterAt(playheadT);
+      await promptAndExportScene(chap, "cut");
+    } else if (mode === "nearest") {
+      const nearest = getNearestSceneAt(playheadT);
+      await promptAndExportScene(nearest, "scene");
+    } else if (mode === "manual") {
+      openManualExportModal();
+    }
+  });
 });
 
 document.getElementById("export-menu-btn").addEventListener("click", (e) => {
@@ -1795,6 +2479,7 @@ document.getElementById("export-menu-btn").addEventListener("click", (e) => {
 
 document.addEventListener("click", () => {
   exportDropdown.classList.add("hidden");
+  exportSceneDropdown.classList.add("hidden");
 });
 
 exportDropdown.querySelectorAll("button[data-fmt]").forEach((btn) => {
@@ -1855,7 +2540,7 @@ window.addEventListener("resize", () => {
 if (typeof interact !== "undefined") {
   interact(playerShell)
     .draggable({
-      ignoreFrom: "button, .vjs-control-bar, input",
+      ignoreFrom: "button, .vjs-control-bar, input, .dropdown-menu",
       listeners: {
         move(event) {
           winState.x += event.dx;
@@ -1867,7 +2552,7 @@ if (typeof interact !== "undefined") {
     .resizable({
       edges: { left: true, right: true, bottom: true, top: true },
       margin: 12,
-      ignoreFrom: "button, .vjs-control-bar",
+      ignoreFrom: "button, .vjs-control-bar, .dropdown-menu",
       listeners: {
         move(event) {
           let newW = event.rect.width;
@@ -1892,6 +2577,7 @@ if (typeof interact !== "undefined") {
 }
 
 document.addEventListener("keydown", (e) => {
+  if (exportPopover.open || settingsPopover.open || manualExportPopover.open) return;
   if (playerShell.classList.contains("hidden") && !isInPip()) return;
   if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
   if (e.key === "Escape") {

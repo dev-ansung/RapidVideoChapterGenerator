@@ -60,6 +60,28 @@ class RawScanResult:
     black_points: list[float] = field(default_factory=list)
     visual_cuts: list[VisualCut] = field(default_factory=list)
 
+    def to_candidates_list(self) -> list[dict[str, str | float]]:
+        items: list[dict[str, str | float]] = [
+            {
+                "timestamp": round(bp, 2),
+                "kind": "black",
+                "score": 2.0,
+                "detail": f"Black fade @ {fmt_hms(bp)} ({bp:.2f}s)",
+            }
+            for bp in self.black_points
+        ]
+        for vc in self.visual_cuts:
+            items.append(
+                {
+                    "timestamp": round(vc.timestamp, 2),
+                    "kind": "visual",
+                    "score": round(vc.score, 3),
+                    "detail": f"Visual cut @ {fmt_hms(vc.timestamp)} (score={vc.score:.3f})",
+                }
+            )
+        items.sort(key=lambda x: float(x["timestamp"]))
+        return items
+
 
 @dataclass(frozen=True)
 class BoundaryStats:
