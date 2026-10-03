@@ -464,9 +464,6 @@
     background: transparent;
     backdrop-filter: none;
     pointer-events: none;
-    align-items: flex-end;
-    justify-content: flex-end;
-    padding: 14px;
   }
   .player-shell {
     pointer-events: auto;
@@ -476,13 +473,20 @@
     color: var(--text);
     box-shadow: 0 20px 56px rgba(0, 0, 0, 0.85);
     overflow: hidden;
-    transition: width 0.18s ease;
   }
   .player-overlay.mode-modal .player-shell {
     width: min(88vw, 1080px);
   }
   .player-overlay.mode-docked .player-shell {
-    width: min(380px, 92vw);
+    position: fixed;
+    left: var(--pip-x, calc(100vw - 380px - 18px));
+    top: var(--pip-y, calc(100vh - 214px - 18px));
+    width: var(--pip-w, 380px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.85);
+    touch-action: none;
+    user-select: none;
   }
   .popover-header {
     display: flex;
@@ -524,15 +528,56 @@
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
   }
-  .player-overlay.mode-docked .popover-range,
-  .player-overlay.mode-docked #split-here-btn {
-    display: none;
+  .player-overlay.mode-docked .popover-header,
+  .player-overlay.mode-docked .vjs-control-bar,
+  .player-overlay.mode-docked .vjs-big-play-button {
+    display: none !important;
   }
   .player-stage {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
     background: #000;
+  }
+  .pip-shield {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    cursor: grab;
+  }
+  .pip-shield:active {
+    cursor: grabbing;
+  }
+  .player-overlay.mode-docked .pip-shield {
+    display: block;
+  }
+  .pip-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    background: rgba(11, 12, 16, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+  .player-overlay.mode-docked .player-shell:hover .pip-close-btn {
+    opacity: 1;
+  }
+  .pip-close-btn:hover {
+    background: var(--danger);
+    border-color: var(--danger);
   }
   .video-js {
     width: 100% !important;
@@ -717,6 +762,9 @@
     </div>
     <div class="player-stage">
       <video id="vjs-player" class="video-js vjs-big-play-centered" controls playsinline preload="metadata"></video>
+      <div id="pip-shield" class="pip-shield">
+        <button id="pip-close-btn" class="pip-close-btn" type="button" aria-label="Close">✕</button>
+      </div>
     </div>
   </div>
 </div>
@@ -733,6 +781,7 @@
 </dialog>
 
 <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js"></script>
 <script>
 const DEFAULT_CFG = __DEFAULT_CFG__;
 let currentDir = __INIT_DIR__;
@@ -824,6 +873,23 @@ function showView(viewName) {
   }
 }
 
+const pipState = { x: null, y: null, w: 380, moved: false };
+
+function applyPipBounds() {
+  const maxW = Math.max(220, window.innerWidth - 24);
+  pipState.w = Math.max(220, Math.min(maxW, pipState.w));
+  const h = pipState.w * (9 / 16);
+  if (pipState.x === null || pipState.y === null) {
+    pipState.x = window.innerWidth - pipState.w - 18;
+    pipState.y = window.innerHeight - h - 18;
+  }
+  pipState.x = Math.max(8, Math.min(window.innerWidth - pipState.w - 8, pipState.x));
+  pipState.y = Math.max(8, Math.min(window.innerHeight - h - 8, pipState.y));
+  playerShell.style.setProperty("--pip-x", `${Math.round(pipState.x)}px`);
+  playerShell.style.setProperty("--pip-y", `${Math.round(pipState.y)}px`);
+  playerShell.style.setProperty("--pip-w", `${Math.round(pipState.w)}px`);
+}
+
 function setPlayerMode(mode) {
   if (mode === "closed") {
     player.pause();
@@ -834,11 +900,10 @@ function setPlayerMode(mode) {
   if (mode === "docked") {
     playerOverlay.classList.remove("mode-modal");
     playerOverlay.classList.add("mode-docked");
-    dockToggleBtn.textContent = "⤢ Expand";
+    applyPipBounds();
   } else {
     playerOverlay.classList.remove("mode-docked");
     playerOverlay.classList.add("mode-modal");
-    dockToggleBtn.textContent = "⤡ Dock";
   }
 }
 
@@ -1354,6 +1419,75 @@ dockToggleBtn.addEventListener("click", () => {
 document.getElementById("close-player-btn").addEventListener("click", () => {
   setPlayerMode("closed");
 });
+
+document.getElementById("pip-close-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  setPlayerMode("closed");
+});
+
+document.getElementById("pip-shield").addEventListener("click", (e) => {
+  if (e.target.closest("#pip-close-btn")) return;
+  if (pipState.moved) {
+    pipState.moved = false;
+    return;
+  }
+  setPlayerMode("modal");
+});
+
+window.addEventListener("resize", () => {
+  if (playerOverlay.classList.contains("mode-docked")) {
+    applyPipBounds();
+  }
+});
+
+if (typeof interact !== "undefined") {
+  interact(playerShell)
+    .draggable({
+      ignoreFrom: "#pip-close-btn",
+      listeners: {
+        start() {
+          pipState.moved = false;
+        },
+        move(event) {
+          if (!playerOverlay.classList.contains("mode-docked")) return;
+          pipState.moved = true;
+          pipState.x += event.dx;
+          pipState.y += event.dy;
+          applyPipBounds();
+        },
+      },
+    })
+    .resizable({
+      edges: { left: true, right: true, bottom: true, top: true },
+      margin: 12,
+      ignoreFrom: "#pip-close-btn",
+      listeners: {
+        start() {
+          pipState.moved = true;
+        },
+        move(event) {
+          if (!playerOverlay.classList.contains("mode-docked")) return;
+          pipState.moved = true;
+          let newW = event.rect.width;
+          if ((event.edges.top || event.edges.bottom) && !event.edges.left && !event.edges.right) {
+            newW = event.rect.height * (16 / 9);
+          }
+          newW = Math.max(220, Math.min(window.innerWidth - 24, newW));
+          const prevW = pipState.w;
+          const prevH = prevW * (9 / 16);
+          const newH = newW * (9 / 16);
+          if (event.edges.left) {
+            pipState.x += prevW - newW;
+          }
+          if (event.edges.top) {
+            pipState.y += prevH - newH;
+          }
+          pipState.w = newW;
+          applyPipBounds();
+        },
+      },
+    });
+}
 
 document.addEventListener("keydown", (e) => {
   if (playerOverlay.classList.contains("hidden")) return;
