@@ -327,7 +327,9 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 return
             s_t = safe_float(raw_scene.get("start_time")) or 0.0
             e_t = safe_float(raw_scene.get("end_time")) or (s_t + 1.0)
-            idx_num = int(safe_float(raw_scene.get("scene_number") or raw_scene.get("index")) or 1)
+            idx_num = int(
+                safe_float(raw_scene.get("scene_number") or raw_scene.get("index") or raw_scene.get("id")) or 1
+            )
             c_dur = safe_float(raw_scene.get("card_dur")) or self.server.default_config.card_dur
             raw_title = str(raw_scene.get("title", f"Scene {idx_num:02d}")).strip()
             title = unicodedata.normalize("NFC", raw_title) if raw_title else f"Scene {idx_num:02d}"
@@ -345,14 +347,22 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 card_dur=c_dur,
             )
             raw_out = str(payload.get("output_path", "")).strip()
+            slug = f"{int(s_t) // 3600:02d}-{(int(s_t) % 3600) // 60:02d}-{int(s_t) % 60:02d}"
             out_target: Path | None = None
             if raw_out:
                 cand = Path(raw_out).expanduser()
-                if cand.is_dir() or raw_out.endswith("/"):
-                    slug = f"{int(s_t) // 3600:02d}-{(int(s_t) % 3600) // 60:02d}-{int(s_t) % 60:02d}"
-                    out_target = (cand / f"cut_{seg.id_str}_{slug}.mp4").resolve()
+                if cand.is_dir() or raw_out.endswith("/") or raw_out.endswith("\\"):
+                    out_target = (cand / f"{vid_path.stem}_scene_{seg.id_str}_{slug}.mp4").resolve()
+                elif not cand.is_absolute():
+                    out_target = (
+                        (vid_path.parent / cand).with_suffix(".mp4" if not cand.suffix else cand.suffix).resolve()
+                    )
                 else:
                     out_target = (cand if cand.suffix else cand.with_suffix(".mp4")).resolve()
+            else:
+                out_target = (
+                    vid_path.parent / f"{vid_path.stem}_cuts" / f"{vid_path.stem}_scene_{seg.id_str}_{slug}.mp4"
+                ).resolve()
             include_intro = bool(payload.get("include_intro", True))
             try:
                 out_file = export_scene_cut(vid_path, seg, output_path=out_target, include_intro=include_intro)

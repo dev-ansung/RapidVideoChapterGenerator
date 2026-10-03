@@ -210,6 +210,7 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
                 "output_path": str(custom_dest),
                 "scene": {
                     "scene_number": 1,
+                    "id_str": "01",
                     "start_time": 0.0,
                     "end_time": 4.0,
                     "title": "Opening",
@@ -222,6 +223,25 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
         out_scene_path = Path(str(scene_exported.get("path", "")))
         assert out_scene_path == custom_dest.resolve()
         assert out_scene_path.exists()
+
+        # Relative path export resolves relative to video parent
+        rel_exported = _post_json(
+            f"{base_url}/api/chapters/export-scene",
+            {
+                "path": str(vid),
+                "output_path": "rel_clip_01.mp4",
+                "scene": {
+                    "id": "01",
+                    "start_time": 0.0,
+                    "end_time": 2.0,
+                    "title": "Opening",
+                },
+            },
+        )
+        assert rel_exported.get("ok") is True
+        rel_scene_path = Path(str(rel_exported.get("path", "")))
+        assert rel_scene_path == (vid.parent / "rel_clip_01.mp4").resolve()
+        assert rel_scene_path.exists()
 
         reveal_res = _post_json(f"{base_url}/api/fs/reveal", {"path": str(out_scene_path)})
         assert reveal_res.get("ok") is True

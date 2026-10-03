@@ -101,7 +101,7 @@ def export_scene_cut(
     out_mp4 = (
         output_path.expanduser().resolve()
         if output_path is not None
-        else src_path.parent / f"{src_path.stem}_cuts" / f"cut_{segment.id_str}_{slug}.mp4"
+        else src_path.parent / f"{src_path.stem}_cuts" / f"{src_path.stem}_scene_{segment.id_str}_{slug}.mp4"
     )
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
 

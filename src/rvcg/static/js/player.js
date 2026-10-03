@@ -192,13 +192,14 @@ async function exportActiveScene() {
   const activeIdx = state.cuts.findIndex((c) => currTime >= c.start_time && currTime < c.end_time);
   const targetIdx = activeIdx !== -1 ? activeIdx : (state.currentIndex >= 0 ? state.currentIndex : 0);
   const scene = state.cuts[targetIdx];
-  if (!scene) return;
-
-  const defaultOut = `cut_${scene.id_str}.mp4`;
-  const outPath = window.prompt(`Export Scene #${scene.id} ("${scene.title}") to path:`, defaultOut);
+  const videoStem = state.currentVideoPath ? state.currentVideoPath.split("/").pop().replace(/\.[^/.]+$/, "") : "video";
+  const sceneId = String(scene.id_str || scene.id || scene.scene_number || (targetIdx + 1)).padStart(2, "0");
+  const timeSlug = fmtHms(scene.start_time).replace(/:/g, "-");
+  const defaultOut = `${videoStem}_scene_${sceneId}_${timeSlug}.mp4`;
+  const outPath = window.prompt(`Export Scene #${sceneId} ("${scene.title || `Scene ${sceneId}`}") to path:`, defaultOut);
   if (!outPath) return;
 
-  showPlayerHud(`Exporting Scene #${scene.id}...`);
+  showPlayerHud(`Exporting Scene #${sceneId}...`);
   try {
     const res = await exportSceneClip(state.currentVideoPath, scene, outPath, true);
     if (res.ok) {

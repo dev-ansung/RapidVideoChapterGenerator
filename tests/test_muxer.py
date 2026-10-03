@@ -117,7 +117,7 @@ def test_export_scene_cut_creates_valid_video(tmp_path: Path) -> None:
     assert out_file.exists()
     assert out_file.stat().st_size > 0
     assert out_file.parent.name == "movie_cuts"
-    assert out_file.name == "cut_01_00-00-00.mp4"
+    assert out_file.name == "movie_scene_01_00-00-00.mp4"
     dur = probe_duration(out_file)
     assert dur >= 4.5
 

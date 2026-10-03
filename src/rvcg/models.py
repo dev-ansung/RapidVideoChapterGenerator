@@ -155,7 +155,9 @@ class SceneSegment:
     def to_dict(self) -> dict[str, str | int | float | list[float] | list[str]]:
         return {
             "id": self.id_str,
+            "id_str": self.id_str,
             "scene_number": self.index,
+            "index": self.index,
             "title": self.title,
             "start_time": round(self.start_time, 2),
             "end_time": round(self.end_time, 2),
