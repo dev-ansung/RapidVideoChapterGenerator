@@ -1352,6 +1352,12 @@ document.getElementById("export-scene-btn").addEventListener("click", async () =
   }
   if (idx < 0 || idx >= CUTS.length) idx = 0;
   const item = CUTS[idx];
+  const slug = fmtHms(item.start_time).replace(/:/g, "-");
+  const baseStem = currentVideoPath.replace(/\.[^/.]+$/, "");
+  const defaultOut = `${baseStem}_cuts/cut_${item.id}_${slug}.mp4`;
+  const targetOut = window.prompt("Save exported scene to:", defaultOut);
+  if (!targetOut || !targetOut.trim()) return;
+
   const btn = document.getElementById("export-scene-btn");
   const origText = btn.textContent;
   btn.disabled = true;
@@ -1361,11 +1367,11 @@ document.getElementById("export-scene-btn").addEventListener("click", async () =
     const res = await fetch("/api/chapters/export-scene", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: currentVideoPath, scene: item }),
+      body: JSON.stringify({ path: currentVideoPath, scene: item, output_path: targetOut.trim() }),
     });
     const data = await res.json();
     if (data.ok) {
-      setStatus(`✓ Exported: ${data.filename}`, false);
+      setStatus(`✓ Exported: ${data.path}`, false);
     } else {
       setStatus(`Export failed: ${data.error || "error"}`, true);
     }
