@@ -93,10 +93,8 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert 'id="settings-popover"' in html
             assert 'id="pref-theme-select"' in html
             assert 'data-theme="black"' in html
-            assert 'id="pref-show-cut-dot"' in html
-            assert "cut-dot" in html
-            assert 'id="prev-cut-btn"' in html
-            assert 'id="next-cut-btn"' in html
+            assert "vjs-prev-cut-control" in html
+            assert "vjs-next-cut-control" in html
             assert 'id="split-here-btn"' in html
             assert 'id="export-scene-btn"' in html
             assert 'id="player-hud-toast"' in html

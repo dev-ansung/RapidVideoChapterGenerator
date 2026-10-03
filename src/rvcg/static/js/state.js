@@ -47,8 +47,6 @@ export const dom = {
   get exportTextarea() { return document.getElementById("export-textarea"); },
   get exportDropdown() { return document.getElementById("export-dropdown"); },
   get exportSceneBtn() { return document.getElementById("export-scene-btn"); },
-  get prevCutBtn() { return document.getElementById("prev-cut-btn"); },
-  get nextCutBtn() { return document.getElementById("next-cut-btn"); },
   get splitHereBtn() { return document.getElementById("split-here-btn"); },
   get playerHudToast() { return document.getElementById("player-hud-toast"); },
   get settingsPopover() { return document.getElementById("settings-popover"); },

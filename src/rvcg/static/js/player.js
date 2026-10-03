@@ -249,7 +249,48 @@ async function exportActiveScene() {
   }
 }
 
+function registerCutButtons() {
+  if (typeof window.videojs === "undefined") return;
+  const Button = window.videojs.getComponent("Button");
+  if (!Button) return;
+
+  if (!window.videojs.getComponent("PrevCutButton")) {
+    class PrevCutButton extends Button {
+      constructor(player, options) {
+        super(player, options);
+        this.controlText("Previous Cut ([)");
+        this.addClass("vjs-prev-cut-control");
+        const icon = document.createElement("i");
+        icon.className = "ph ph-caret-double-left text-sm pointer-events-none";
+        this.el().appendChild(icon);
+      }
+      handleClick() {
+        seekCut("prev");
+      }
+    }
+    window.videojs.registerComponent("PrevCutButton", PrevCutButton);
+  }
+
+  if (!window.videojs.getComponent("NextCutButton")) {
+    class NextCutButton extends Button {
+      constructor(player, options) {
+        super(player, options);
+        this.controlText("Next Cut (])");
+        this.addClass("vjs-next-cut-control");
+        const icon = document.createElement("i");
+        icon.className = "ph ph-caret-double-right text-sm pointer-events-none";
+        this.el().appendChild(icon);
+      }
+      handleClick() {
+        seekCut("next");
+      }
+    }
+    window.videojs.registerComponent("NextCutButton", NextCutButton);
+  }
+}
+
 export function initPlayer(onTimeUpdateChapter, onChaptersChanged) {
+  registerCutButtons();
   player = window.videojs("vjs-player", {
     controls: true,
     autoplay: false,
@@ -262,6 +303,10 @@ export function initPlayer(onTimeUpdateChapter, onChaptersChanged) {
   });
 
   player.ready(() => {
+    if (player.controlBar) {
+      player.controlBar.addChild("PrevCutButton", {}, 1);
+      player.controlBar.addChild("NextCutButton", {}, 2);
+    }
     const progressControl = player.controlBar.progressControl;
     const seekBar = progressControl.seekBar;
 
@@ -312,8 +357,6 @@ export function initPlayer(onTimeUpdateChapter, onChaptersChanged) {
     showPlayer(false);
   });
 
-  dom.prevCutBtn?.addEventListener("click", () => seekCut("prev"));
-  dom.nextCutBtn?.addEventListener("click", () => seekCut("next"));
   dom.splitHereBtn?.addEventListener("click", () => splitCurrentScene(onChaptersChanged));
   dom.exportSceneBtn?.addEventListener("click", () => exportActiveScene());
 
