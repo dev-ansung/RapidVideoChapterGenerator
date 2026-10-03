@@ -235,7 +235,11 @@ def process_video(
     video_path = resolved_vid
 
     t0 = time.perf_counter()
-    duration = probe_duration(video_path)
+    try:
+        duration = probe_duration(video_path)
+    except Exception as err:
+        console.print(f"[bold red]Error:[/bold red] {err}")
+        return
     out_fmt = str(args.format)
     want_browse = bool(args.browse)
     should_refresh = bool(args.refresh)

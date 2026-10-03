@@ -1,6 +1,8 @@
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from rvcg.models import SceneSegment
 from rvcg.muxer import build_ffmetadata, embed_chapters_atomic, export_scene_cut, format_chapters_export
 from rvcg.probe import probe_duration, probe_embedded_chapters
@@ -211,3 +213,22 @@ def test_export_scene_cut_stream_integrity_and_no_intro(tmp_path: Path) -> None:
     )
     for st in probe_direct["streams"]:
         assert abs(float(st["duration"]) - 4.0) < 0.45
+
+
+def test_embed_chapters_atomic_aborts_on_corrupt_video(tmp_path: Path) -> None:
+    corrupt_vid = tmp_path / "corrupt_sample.mp4"
+    corrupt_vid.write_bytes(b"corrupt header bytes")
+
+    seg = SceneSegment(
+        index=1,
+        start_time=0.0,
+        end_time=4.0,
+        title="Scene 01",
+        cell_times=[0.2, 0.6, 1.0, 1.4, 1.8, 2.2, 2.6, 3.0],
+    )
+    with pytest.raises(RuntimeError, match="chapter remux failed"):
+        embed_chapters_atomic(corrupt_vid, [seg])
+
+    # Ensure original file is not destroyed and no leftover temp files remain
+    assert corrupt_vid.read_bytes() == b"corrupt header bytes"
+    assert len(list(tmp_path.glob("*.rvcg_tmp*"))) == 0

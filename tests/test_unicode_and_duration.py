@@ -34,7 +34,10 @@ def test_probe_duration_handles_na_format_duration(tmp_path: Path) -> None:
             "format": {"duration": "N/A"},
         }
     )
-    with patch("subprocess.check_output", return_value=mock_json):
+    with patch(
+        "subprocess.run",
+        return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout=mock_json, stderr=""),
+    ):
         assert probe_duration(fake_vid) == 312.5
 
 
@@ -43,7 +46,13 @@ def test_probe_duration_raises_clean_error_when_all_na(tmp_path: Path) -> None:
     fake_vid.write_bytes(b"00")
 
     with patch(
-        "subprocess.check_output", side_effect=[json.dumps({"format": {"duration": "N/A"}, "streams": []}), "N/A\n"]
+        "subprocess.run",
+        side_effect=[
+            subprocess.CompletedProcess(
+                args=[], returncode=0, stdout=json.dumps({"format": {"duration": "N/A"}, "streams": []}), stderr=""
+            ),
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="N/A\n", stderr=""),
+        ],
     ):
         with pytest.raises(RuntimeError, match="Cannot determine duration"):
             probe_duration(fake_vid)
@@ -61,7 +70,10 @@ def test_probe_embedded_chapters_ignores_na_timestamps(tmp_path: Path) -> None:
             ]
         }
     )
-    with patch("subprocess.check_output", return_value=mock_json):
+    with patch(
+        "subprocess.run",
+        return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout=mock_json, stderr=""),
+    ):
         ch = probe_embedded_chapters(fake_vid, min_chapter_sec=10.0)
         assert len(ch) == 1
         assert ch[0][2] == "【序章】温泉旅行 • 第1話"

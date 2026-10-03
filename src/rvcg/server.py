@@ -307,8 +307,13 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(400, json.dumps({"ok": False, "error": "Video file not found"}, ensure_ascii=False))
                 return
             segments = parse_chapters_payload(raw_ch, self.server.default_config.card_dur)
-            dest = embed_chapters_atomic(vid_path, segments, output_path=None)
-            self._send_json(200, json.dumps({"ok": True, "path": str(dest)}, ensure_ascii=False))
+            try:
+                dest = embed_chapters_atomic(vid_path, segments, output_path=None)
+                self._send_json(200, json.dumps({"ok": True, "path": str(dest)}, ensure_ascii=False))
+            except Exception as e:
+                self._send_json(
+                    500, json.dumps({"ok": False, "error": f"Failed to embed chapters: {e}"}, ensure_ascii=False)
+                )
             return
 
         if route == "/api/chapters/export":

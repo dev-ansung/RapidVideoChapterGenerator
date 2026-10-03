@@ -38,21 +38,24 @@ def parse_duration_tag(val: str | int | float | None) -> float | None:
 
 
 def probe_duration(video_path: Path) -> float:
-    raw = subprocess.check_output(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration:format_tags=DURATION:stream=duration:stream_tags=DURATION",
-            "-of",
-            "json",
-            str(video_path),
-        ],
+    cmd_fmt = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration:format_tags=DURATION:stream=duration:stream_tags=DURATION",
+        "-of",
+        "json",
+        str(video_path),
+    ]
+    proc_fmt = subprocess.run(
+        cmd_fmt,
         stdin=subprocess.DEVNULL,
-        encoding="utf-8",
-        errors="replace",
-    ).strip()
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    raw = proc_fmt.stdout.strip() if proc_fmt.returncode == 0 else ""
 
     candidates: list[float] = []
     if raw:
@@ -97,49 +100,64 @@ def probe_duration(video_path: Path) -> float:
     if candidates:
         return max(candidates)
 
-    pkt_raw = subprocess.check_output(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-skip_frame",
-            "nokey",
-            "-show_entries",
-            "packet=pts_time",
-            "-of",
-            "csv=p=0",
-            str(video_path),
-        ],
+    cmd_pkt = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-skip_frame",
+        "nokey",
+        "-show_entries",
+        "packet=pts_time",
+        "-of",
+        "csv=p=0",
+        str(video_path),
+    ]
+    proc_pkt = subprocess.run(
+        cmd_pkt,
         stdin=subprocess.DEVNULL,
-        encoding="utf-8",
-        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
-    for line in reversed(pkt_raw.splitlines()):
-        val = safe_float(line.strip().rstrip(","))
-        if val is not None and val > 0:
-            return val
+    if proc_pkt.returncode == 0:
+        for line in reversed(proc_pkt.stdout.splitlines()):
+            val = safe_float(line.strip().rstrip(","))
+            if val is not None and val > 0:
+                return val
 
-    raise RuntimeError(f"Cannot determine duration for '{video_path.name}' (corrupt or incomplete video container)")
+    err_detail = (
+        proc_fmt.stderr.strip() or proc_pkt.stderr.strip() or "corrupt, incomplete, or unreadable video container"
+    )
+    raise RuntimeError(f"Cannot determine duration for '{video_path.name}': {err_detail}")
 
 
 def probe_embedded_chapters(video_path: Path, min_chapter_sec: float = 15.0) -> list[tuple[float, float, str]]:
-    chapters_raw = subprocess.check_output(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_chapters",
-            "-of",
-            "json",
-            str(video_path),
-        ],
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_chapters",
+        "-of",
+        "json",
+        str(video_path),
+    ]
+    proc = subprocess.run(
+        cmd,
         stdin=subprocess.DEVNULL,
-        encoding="utf-8",
-        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
-    payload = json.loads(chapters_raw)
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return []
+
+    try:
+        payload = json.loads(proc.stdout)
+    except Exception:
+        return []
+
     chapters = payload.get("chapters", []) if isinstance(payload, dict) else []
     chapter_segs: list[tuple[float, float, str]] = []
     for idx, ch in enumerate(chapters, 1):
@@ -180,7 +198,7 @@ def extract_subtitles(video_path: Path, out_dir: Path) -> list[SubtitleTrack]:
                 )
             break
 
-    probe_raw = subprocess.check_output(
+    probe_proc = subprocess.run(
         [
             "ffprobe",
             "-v",
@@ -194,10 +212,18 @@ def extract_subtitles(video_path: Path, out_dir: Path) -> list[SubtitleTrack]:
             str(video_path),
         ],
         stdin=subprocess.DEVNULL,
-        encoding="utf-8",
-        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
-    payload = json.loads(probe_raw)
+    if probe_proc.returncode != 0 or not probe_proc.stdout.strip():
+        return tracks
+
+    try:
+        payload = json.loads(probe_proc.stdout)
+    except Exception:
+        return tracks
+
     sub_streams = payload.get("streams", []) if isinstance(payload, dict) else []
     text_codecs = {"subrip", "srt", "mov_text", "ass", "ssa", "webvtt", "text"}
 

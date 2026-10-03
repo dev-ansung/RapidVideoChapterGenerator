@@ -58,7 +58,7 @@ def embed_chapters_atomic(
 ) -> Path:
     dest_path = output_path.expanduser().resolve() if output_path is not None else video_path.resolve()
     dest_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_video = dest_path.parent / f".{dest_path.stem}.rvcg_tmp{dest_path.suffix}"
+    tmp_video = dest_path.parent / f"{dest_path.stem}.rvcg_tmp{dest_path.suffix}"
 
     with tempfile.NamedTemporaryFile("w", suffix=".ffmeta", encoding="utf-8", delete=False) as mf:
         mf.write(build_ffmetadata(segments))
@@ -68,15 +68,55 @@ def embed_chapters_atomic(
         cmd = [
             "ffmpeg", "-nostdin", "-y", "-v", "error",
             "-i", str(video_path), "-i", str(meta_path),
-            "-map", "0", "-map_metadata", "1", "-map_chapters", "1", "-c", "copy",
+            "-map", "0", "-map_metadata", "0", "-map_chapters", "1",
+            "-c", "copy", "-ignore_unknown",
         ]  # fmt: skip
         if dest_path.suffix.lower() in {".mp4", ".m4v", ".mov"}:
             cmd.extend(["-movflags", "+faststart"])
         cmd.append(str(tmp_video))
 
-        subprocess.run(cmd, stdin=subprocess.DEVNULL, check=True)
+        res = subprocess.run(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if res.returncode != 0:
+            raise RuntimeError(f"FFmpeg chapter remux failed: {res.stderr.strip() or 'Unknown error'}")
+
         if not tmp_video.exists() or tmp_video.stat().st_size == 0:
             raise RuntimeError("Remuxed output file is empty")
+
+        # Validate container integrity before in-place file replacement
+        val_cmd = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
+            str(tmp_video),
+        ]
+        val_proc = subprocess.run(
+            val_cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if val_proc.returncode != 0:
+            raise RuntimeError(f"Remux integrity validation failed: {val_proc.stderr.strip() or 'Invalid container'}")
+
+        try:
+            val_data = json.loads(val_proc.stdout)
+            val_dur = safe_float(val_data.get("format", {}).get("duration")) if isinstance(val_data, dict) else None
+            if val_dur is None or val_dur <= 0:
+                raise RuntimeError("Remux integrity validation failed: duration is 0 or missing")
+        except Exception as err:
+            raise RuntimeError(f"Remux integrity validation failed: {err}") from err
+
         tmp_video.replace(dest_path)
         return dest_path
     except Exception:
