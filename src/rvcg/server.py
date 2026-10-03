@@ -493,7 +493,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                     cfg,
                     browser_dir,
                     True,
-                    False,
+                    use_existing,
                     None if use_existing else on_phase,
                     on_sprite,
                 )

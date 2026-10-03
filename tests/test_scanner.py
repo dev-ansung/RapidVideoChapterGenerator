@@ -140,3 +140,54 @@ def test_find_precision_transition_white_fade(tmp_path: Path) -> None:
     assert res is not None
     assert res.kind == "white"
     assert 1.5 <= res.timestamp <= 3.5
+
+
+def test_scan_keyframes_progress_and_sprites(tmp_path: Path) -> None:
+    import subprocess
+
+    from rvcg.models import BoundaryConfig
+    from rvcg.scanner import scan_keyframes
+
+    vid = tmp_path / "smoke.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=duration=4:size=320x180:rate=10",
+            "-c:v",
+            "libx264",
+            "-g",
+            "5",
+            str(vid),
+        ],
+        stdin=subprocess.DEVNULL,
+        check=True,
+    )
+
+    phase_events: list[tuple[float, float, str]] = []
+
+    def on_phase(phase: int, completed: float, total: float, info: str) -> None:
+        if phase == 2:
+            phase_events.append((completed, total, info))
+
+    cfg = BoundaryConfig(workers=2)
+    raw, sprite = scan_keyframes(
+        vid,
+        duration=4.0,
+        config=cfg,
+        out_dir=tmp_path,
+        build_sprite=True,
+        on_phase=on_phase,
+    )
+
+    assert len(phase_events) > 2
+    # Progress must start at or near 0, not wait until the end
+    assert phase_events[0][0] < 2.0
+    assert sprite is not None
+    assert (tmp_path / sprite.url).exists()

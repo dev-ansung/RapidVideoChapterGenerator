@@ -76,6 +76,7 @@ def parse_ffmpeg_line(
     chunk_dur: float,
     cur_local_t: float | None,
     is_white: bool = False,
+    scene_threshold: float = 0.0,
 ) -> LineParseEvent:
     blacks: list[float] = []
     whites: list[float] = []
@@ -91,7 +92,13 @@ def parse_ffmpeg_line(
         be = safe_float(m.group(2))
         if bs is not None and be is not None:
             mid = t_start + (bs + be) / 2.0
-            if is_white or "Parsed_blackdetect_6" in line or "Parsed_blackdetect_5" in line or "white" in line.lower():
+            if (
+                is_white
+                or "Parsed_blackdetect_6" in line
+                or "Parsed_blackdetect_5" in line
+                or "Parsed_blackdetect_4" in line
+                or "white" in line.lower()
+            ):
                 whites.append(mid)
             else:
                 blacks.append(mid)
@@ -106,7 +113,7 @@ def parse_ffmpeg_line(
     m_sc = re.search(r"lavfi\.scene_score=([^\s]+)", line)
     if m_sc and next_local_t is not None:
         parsed_sc = safe_float(m_sc.group(1))
-        if parsed_sc is not None:
+        if parsed_sc is not None and parsed_sc >= scene_threshold:
             cuts.append(VisualCut(timestamp=t_start + next_local_t, score=parsed_sc))
 
     if line.startswith("out_time_us="):
@@ -153,26 +160,102 @@ def scan_keyframes(
     worker_whites: dict[int, list[float]] = {c.worker_id: [] for c in chunks}
     worker_cuts: dict[int, list[VisualCut]] = {c.worker_id: [] for c in chunks}
 
-    def run_chunk(spec: ChunkSpec) -> Path | None:
-        chunk_dur = max(0.1, spec.t_end - spec.t_start)
-        th = config.scene_threshold
-        bd = max(0.05, config.black_min_dur)
-        if skip_boundary_scan and spec.strip_path is not None:
+    if not skip_boundary_scan:
+
+        def run_boundary_chunk(spec: ChunkSpec) -> None:
+            chunk_dur = max(0.1, spec.t_end - spec.t_start)
+            th = config.scene_threshold
+            bd = max(0.05, config.black_min_dur)
+            fc = (
+                f"[0:v]scale=240:135:flags=fast_bilinear,split=2[vd_blk][vd_wht];"
+                f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gte(scene,0)',metadata=print:file=-[vnull1];"
+                f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:key=lavfi.black_start:file=-[vnull2]"
+            )
             cmd = [
                 "ffmpeg",
                 "-nostdin",
                 "-y",
-                "-v",
-                "error",
+                "-hide_banner",
                 "-nostats",
-                "-progress",
-                "pipe:1",
                 "-ss",
                 f"{spec.t_start:.2f}",
                 "-t",
                 f"{chunk_dur:.2f}",
                 "-skip_frame",
                 "nokey",
+                "-i",
+                str(video_path),
+                "-filter_complex",
+                fc,
+                "-map",
+                "[vnull1]",
+                "-f",
+                "null",
+                "-",
+                "-map",
+                "[vnull2]",
+                "-f",
+                "null",
+                "-",
+            ]
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+            )
+            cur_local_t: float | None = None
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                ev = parse_ffmpeg_line(line, spec.t_start, chunk_dur, cur_local_t, scene_threshold=th)
+                cur_local_t = ev.new_local_t
+                if ev.updated:
+                    with lock:
+                        worker_blacks[spec.worker_id].extend(ev.black_midpoints)
+                        worker_whites[spec.worker_id].extend(ev.white_midpoints)
+                        worker_cuts[spec.worker_id].extend(ev.visual_cuts)
+                        if ev.progress_sec is not None:
+                            worker_prog[spec.worker_id] = max(worker_prog[spec.worker_id], ev.progress_sec)
+                        tot_prog = min(duration, sum(worker_prog.values()))
+                        n_b = sum(len(v) for v in worker_blacks.values())
+                        n_w = sum(len(v) for v in worker_whites.values())
+                        n_c = sum(len(v) for v in worker_cuts.values())
+                    emit(2, tot_prog, duration, f"{n_b} black · {n_w} white · {n_c} visual cuts")
+
+            proc.wait()
+            with lock:
+                worker_prog[spec.worker_id] = chunk_dur
+                tot_prog = min(duration, sum(worker_prog.values()))
+                n_b = sum(len(v) for v in worker_blacks.values())
+                n_w = sum(len(v) for v in worker_whites.values())
+                n_c = sum(len(v) for v in worker_cuts.values())
+            emit(2, tot_prog, duration, f"{n_b} black · {n_w} white · {n_c} visual cuts")
+
+        with ThreadPoolExecutor(max_workers=len(chunks)) as pool:
+            list(pool.map(run_boundary_chunk, chunks))
+
+    sprite_meta: SpriteMeta | None = None
+    if build_sprite and out_dir is not None:
+        sprite_prog = {c.worker_id: 0.0 for c in chunks}
+        sprite_lock = threading.Lock()
+
+        def run_sprite_chunk(spec: ChunkSpec) -> Path | None:
+            if spec.strip_path is None:
+                return None
+            chunk_dur = max(0.1, spec.t_end - spec.t_start)
+            cmd = [
+                "ffmpeg",
+                "-nostdin",
+                "-y",
+                "-v",
+                "error",
+                "-ss",
+                f"{spec.t_start:.2f}",
+                "-t",
+                f"{chunk_dur:.2f}",
                 "-i",
                 str(video_path),
                 "-vf",
@@ -185,148 +268,16 @@ def scan_keyframes(
                 "4",
                 str(spec.strip_path),
             ]
-        elif spec.strip_path is not None:
-            fc = (
-                f"[0:v]scale=240:135:flags=fast_bilinear,split=4[vd_blk][vd_wht][vd_cut][vs];"
-                f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,metadata=print:file=-[vnull1];"
-                f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:file=-[vnull2];"
-                f"[vd_cut]select='gt(scene,{th})',metadata=print:file=-[vnull3];"
-                f"[vs]fps=1/{interval},tile={cols}x{spec.n_rows}[vspr]"
-            )
-            cmd = [
-                "ffmpeg",
-                "-nostdin",
-                "-y",
-                "-hide_banner",
-                "-nostats",
-                "-progress",
-                "pipe:1",
-                "-ss",
-                f"{spec.t_start:.2f}",
-                "-t",
-                f"{chunk_dur:.2f}",
-                "-skip_frame",
-                "nokey",
-                "-i",
-                str(video_path),
-                "-filter_complex",
-                fc,
-                "-map",
-                "[vnull1]",
-                "-f",
-                "null",
-                "-",
-                "-map",
-                "[vnull2]",
-                "-f",
-                "null",
-                "-",
-                "-map",
-                "[vnull3]",
-                "-f",
-                "null",
-                "-",
-                "-map",
-                "[vspr]",
-                "-frames:v",
-                "1",
-                "-update",
-                "1",
-                "-q:v",
-                "4",
-                str(spec.strip_path),
-            ]
-        else:
-            fc = (
-                f"[0:v]scale=240:135:flags=fast_bilinear,split=3[vd_blk][vd_wht][vd_cut];"
-                f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,metadata=print:file=-[vnull1];"
-                f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:file=-[vnull2];"
-                f"[vd_cut]select='gt(scene,{th})',metadata=print:file=-[vnull3]"
-            )
-            cmd = [
-                "ffmpeg",
-                "-nostdin",
-                "-y",
-                "-hide_banner",
-                "-nostats",
-                "-progress",
-                "pipe:1",
-                "-ss",
-                f"{spec.t_start:.2f}",
-                "-t",
-                f"{chunk_dur:.2f}",
-                "-skip_frame",
-                "nokey",
-                "-i",
-                str(video_path),
-                "-filter_complex",
-                fc,
-                "-map",
-                "[vnull1]",
-                "-f",
-                "null",
-                "-",
-                "-map",
-                "[vnull2]",
-                "-f",
-                "null",
-                "-",
-                "-map",
-                "[vnull3]",
-                "-f",
-                "null",
-                "-",
-            ]
-
-        proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            encoding="utf-8",
-            errors="replace",
-            bufsize=1,
-        )
-        cur_local_t: float | None = None
-        assert proc.stdout is not None
-        for line in proc.stdout:
-            ev = parse_ffmpeg_line(line, spec.t_start, chunk_dur, cur_local_t)
-            cur_local_t = ev.new_local_t
-            if ev.updated:
-                with lock:
-                    if not skip_boundary_scan:
-                        worker_blacks[spec.worker_id].extend(ev.black_midpoints)
-                        worker_whites[spec.worker_id].extend(ev.white_midpoints)
-                        worker_cuts[spec.worker_id].extend(ev.visual_cuts)
-                    if ev.progress_sec is not None:
-                        worker_prog[spec.worker_id] = max(worker_prog[spec.worker_id], ev.progress_sec)
-                    tot_prog = min(duration, sum(worker_prog.values()))
-                    n_b = sum(len(v) for v in worker_blacks.values())
-                    n_w = sum(len(v) for v in worker_whites.values())
-                    n_c = sum(len(v) for v in worker_cuts.values())
-                if not skip_boundary_scan:
-                    emit(2, tot_prog, duration, f"{n_b} black · {n_w} white · {n_c} visual cuts")
+            subprocess.run(cmd, stdin=subprocess.DEVNULL, check=False)
+            with sprite_lock:
+                sprite_prog[spec.worker_id] = chunk_dur
                 if on_sprite is not None:
-                    on_sprite(tot_prog)
+                    on_sprite(min(duration, sum(sprite_prog.values())))
+            return spec.strip_path
 
-        proc.wait()
-        with lock:
-            worker_prog[spec.worker_id] = chunk_dur
-            tot_prog = min(duration, sum(worker_prog.values()))
-            n_b = sum(len(v) for v in worker_blacks.values())
-            n_w = sum(len(v) for v in worker_whites.values())
-            n_c = sum(len(v) for v in worker_cuts.values())
-        if not skip_boundary_scan:
-            emit(2, tot_prog, duration, f"{n_b} black · {n_w} white · {n_c} visual cuts")
-        if on_sprite is not None:
-            on_sprite(tot_prog)
-        return spec.strip_path
+        with ThreadPoolExecutor(max_workers=len(chunks)) as pool:
+            strip_paths = list(pool.map(run_sprite_chunk, chunks))
 
-    with ThreadPoolExecutor(max_workers=len(chunks)) as pool:
-        strip_paths = list(pool.map(run_chunk, chunks))
-
-    sprite_meta: SpriteMeta | None = None
-    if build_sprite and out_dir is not None:
         sprite_rel = "thumbs/sprite_full.jpg"
         sprite_abs = out_dir / sprite_rel
         valid_strips = [p for p in strip_paths if p is not None and p.exists()]
