@@ -51,9 +51,15 @@ def _get_json(url: str) -> dict[str, JsonValue]:
         return res
 
 
-def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
+def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None:
     vid = tmp_path / "demo clip.mp4"
     _make_sample_video(vid)
+
+    revealed_paths: list[Path] = []
+    if hasattr(monkeypatch, "setattr"):
+        import rvcg.server as srv_mod
+
+        monkeypatch.setattr(srv_mod, "reveal_in_file_manager", lambda p: revealed_paths.append(p))
 
     server = create_lifecycle_server(default_dir=tmp_path, default_config=BoundaryConfig())
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -91,6 +97,8 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             assert 'data-export-mode="chapter"' in html
             assert 'data-export-mode="nearest"' in html
             assert 'data-export-mode="manual"' in html
+            assert 'id="reveal-file-btn"' in html
+            assert "ph-folder-open" in html
             assert 'value="black-fades"' in html
             assert "function isInPip()" in html
             assert "if (!isInPip())" in html
@@ -190,6 +198,10 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
         out_scene_path = Path(str(scene_exported.get("path", "")))
         assert out_scene_path == custom_dest.resolve()
         assert out_scene_path.exists()
+
+        reveal_res = _post_json(f"{base_url}/api/fs/reveal", {"path": str(out_scene_path)})
+        assert reveal_res.get("ok") is True
+        assert revealed_paths == [out_scene_path]
 
         scan_start = _post_json(
             f"{base_url}/api/scan",

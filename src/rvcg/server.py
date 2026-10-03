@@ -4,6 +4,8 @@ import mimetypes
 import queue
 import re
 import shlex
+import subprocess
+import sys
 import tempfile
 import threading
 import unicodedata
@@ -63,6 +65,16 @@ def resolve_any_path(raw: str) -> tuple[Path | None, str]:
     if resolved is not None:
         return resolved, ("file" if resolved.is_file() else "dir")
     return None, "missing"
+
+
+def reveal_in_file_manager(target_path: Path) -> None:
+    if sys.platform == "darwin":
+        subprocess.run(["open", "-R", str(target_path)], stdin=subprocess.DEVNULL, check=False)
+    elif sys.platform == "win32":
+        subprocess.run(["explorer", f"/select,{target_path}"], stdin=subprocess.DEVNULL, check=False)
+    else:
+        folder = target_path.parent if target_path.is_file() else target_path
+        subprocess.run(["xdg-open", str(folder)], stdin=subprocess.DEVNULL, check=False)
 
 
 def parse_chapters_payload(raw_list: list[dict[str, str | int | float]], card_dur: float = 8.4) -> list[SceneSegment]:
@@ -238,6 +250,16 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                         ensure_ascii=False,
                     ),
                 )
+            return
+
+        if route == "/api/fs/reveal":
+            raw_p = str(payload.get("path", ""))
+            resolved, _ = resolve_any_path(raw_p)
+            if resolved is None:
+                self._send_json(404, json.dumps({"ok": False, "error": "Path not found"}, ensure_ascii=False))
+                return
+            reveal_in_file_manager(resolved)
+            self._send_json(200, json.dumps({"ok": True, "path": str(resolved)}, ensure_ascii=False))
             return
 
         if route == "/api/chapters/recalc":
