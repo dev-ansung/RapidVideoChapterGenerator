@@ -215,44 +215,18 @@
     grid-template-columns: repeat(9, 1fr);
     grid-template-rows: 1fr;
   }
-  .player-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 60;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .player-overlay.mode-modal {
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(4px);
-    pointer-events: auto;
-  }
-  .player-overlay.mode-docked {
-    background: transparent;
-    backdrop-filter: none;
-    pointer-events: none;
-  }
   .player-shell {
-    pointer-events: auto;
-    border: 1px solid var(--border);
+    position: fixed;
+    left: var(--win-x, 120px);
+    top: var(--win-y, 80px);
+    width: var(--win-w, min(720px, 90vw));
+    z-index: 80;
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 9px;
     background: var(--panel);
     color: var(--text);
-    box-shadow: 0 20px 56px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.88);
     overflow: hidden;
-  }
-  .player-overlay.mode-modal .player-shell {
-    width: min(88vw, 1080px);
-  }
-  .player-overlay.mode-docked .player-shell {
-    position: fixed;
-    left: var(--pip-x, calc(100vw - 380px - 18px));
-    top: var(--pip-y, calc(100vh - 214px - 18px));
-    width: var(--pip-w, 380px);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 10px;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.85);
     touch-action: none;
     user-select: none;
   }
@@ -264,6 +238,10 @@
     padding: 7px 11px;
     background: #0e1017;
     border-bottom: 1px solid var(--border);
+    cursor: grab;
+  }
+  .popover-header:active {
+    cursor: grabbing;
   }
   .popover-meta {
     display: flex;
@@ -294,56 +272,11 @@
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
-  .player-overlay.mode-docked .popover-header,
-  .player-overlay.mode-docked .vjs-control-bar,
-  .player-overlay.mode-docked .vjs-big-play-button {
-    display: none !important;
-  }
   .player-stage {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
     background: #000;
-  }
-  .pip-shield {
-    display: none;
-    position: absolute;
-    inset: 0;
-    z-index: 30;
-    cursor: grab;
-  }
-  .pip-shield:active {
-    cursor: grabbing;
-  }
-  .player-overlay.mode-docked .pip-shield {
-    display: block;
-  }
-  .pip-close-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 26px;
-    height: 26px;
-    padding: 0;
-    border-radius: 50%;
-    background: rgba(11, 12, 16, 0.78);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: #fff;
-    font-size: 13px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s ease, background 0.15s ease;
-  }
-  .player-overlay.mode-docked .player-shell:hover .pip-close-btn {
-    opacity: 1;
-  }
-  .pip-close-btn:hover {
-    background: var(--danger);
-    border-color: var(--danger);
   }
   .video-js {
     width: 100% !important;
@@ -414,25 +347,19 @@
   <section id="gallery" class="gallery"></section>
 </div>
 
-<div id="player-overlay" class="player-overlay mode-modal hidden">
-  <div id="player-shell" class="player-shell">
-    <div class="popover-header">
-      <div class="popover-meta">
-        <span id="now-badge" class="badge"></span>
-        <span id="now-title" class="popover-title"></span>
-        <span id="now-range" class="popover-range"></span>
-      </div>
-      <div class="toolbar-right">
-        <button id="dock-toggle-btn" type="button">⤡ Dock</button>
-        <button id="close-player-btn" type="button">✕</button>
-      </div>
+<div id="player-shell" class="player-shell hidden">
+  <div class="popover-header">
+    <div class="popover-meta">
+      <span id="now-badge" class="badge"></span>
+      <span id="now-title" class="popover-title"></span>
+      <span id="now-range" class="popover-range"></span>
     </div>
-    <div class="player-stage">
-      <video id="vjs-player" class="video-js vjs-big-play-centered" controls playsinline preload="metadata"></video>
-      <div id="pip-shield" class="pip-shield">
-        <button id="pip-close-btn" class="pip-close-btn" type="button" aria-label="Close">✕</button>
-      </div>
+    <div class="toolbar-right">
+      <button id="close-player-btn" type="button">✕</button>
     </div>
+  </div>
+  <div class="player-stage">
+    <video id="vjs-player" class="video-js vjs-big-play-centered" controls playsinline preload="metadata"></video>
   </div>
 </div>
 
@@ -444,9 +371,7 @@ const SPRITE = __SPRITE__;
 const CUTS = __CUTS__;
 const SUBTITLES = __SUBTITLES__;
 
-const playerOverlay = document.getElementById("player-overlay");
 const playerShell = document.getElementById("player-shell");
-const dockToggleBtn = document.getElementById("dock-toggle-btn");
 const nowBadge = document.getElementById("now-badge");
 const nowRange = document.getElementById("now-range");
 const nowTitle = document.getElementById("now-title");
@@ -469,38 +394,33 @@ let currentIndex = -1;
 let searchQuery = "";
 let sourceLoaded = false;
 
-const pipState = { x: null, y: null, w: 380, moved: false };
+const winState = { x: null, y: null, w: 720 };
 
-function applyPipBounds() {
-  const maxW = Math.max(220, window.innerWidth - 24);
-  pipState.w = Math.max(220, Math.min(maxW, pipState.w));
-  const h = pipState.w * (9 / 16);
-  if (pipState.x === null || pipState.y === null) {
-    pipState.x = window.innerWidth - pipState.w - 18;
-    pipState.y = window.innerHeight - h - 18;
+function applyPlayerBounds() {
+  const maxW = Math.max(260, window.innerWidth - 20);
+  if (winState.x === null || winState.y === null) {
+    winState.w = Math.min(720, maxW);
+    const initH = winState.w * (9 / 16) + 38;
+    winState.x = Math.max(10, (window.innerWidth - winState.w) / 2);
+    winState.y = Math.max(10, (window.innerHeight - initH) / 2);
   }
-  pipState.x = Math.max(8, Math.min(window.innerWidth - pipState.w - 8, pipState.x));
-  pipState.y = Math.max(8, Math.min(window.innerHeight - h - 8, pipState.y));
-  playerShell.style.setProperty("--pip-x", `${Math.round(pipState.x)}px`);
-  playerShell.style.setProperty("--pip-y", `${Math.round(pipState.y)}px`);
-  playerShell.style.setProperty("--pip-w", `${Math.round(pipState.w)}px`);
+  winState.w = Math.max(260, Math.min(maxW, winState.w));
+  const h = winState.w * (9 / 16) + 38;
+  winState.x = Math.max(6, Math.min(window.innerWidth - winState.w - 6, winState.x));
+  winState.y = Math.max(6, Math.min(window.innerHeight - h - 6, winState.y));
+  playerShell.style.setProperty("--win-x", `${Math.round(winState.x)}px`);
+  playerShell.style.setProperty("--win-y", `${Math.round(winState.y)}px`);
+  playerShell.style.setProperty("--win-w", `${Math.round(winState.w)}px`);
 }
 
-function setPlayerMode(mode) {
-  if (mode === "closed") {
+function showPlayer(visible) {
+  if (!visible) {
     player.pause();
-    playerOverlay.classList.add("hidden");
+    playerShell.classList.add("hidden");
     return;
   }
-  playerOverlay.classList.remove("hidden");
-  if (mode === "docked") {
-    playerOverlay.classList.remove("mode-modal");
-    playerOverlay.classList.add("mode-docked");
-    applyPipBounds();
-  } else {
-    playerOverlay.classList.remove("mode-docked");
-    playerOverlay.classList.add("mode-modal");
-  }
+  playerShell.classList.remove("hidden");
+  applyPlayerBounds();
 }
 
 function fmtHms(sec) {
@@ -592,9 +512,7 @@ function openAt(index, seekTime) {
   nowRange.textContent = item.source_range + " (" + item.duration_str + ")";
   highlightActiveCard();
 
-  if (playerOverlay.classList.contains("hidden")) {
-    setPlayerMode("modal");
-  }
+  showPlayer(true);
 
   if (sourceLoaded) {
     player.currentTime(seekTime);
@@ -626,99 +544,61 @@ function openAt(index, seekTime) {
   }
 }
 
-playerOverlay.addEventListener("click", (e) => {
-  if (e.target === playerOverlay && playerOverlay.classList.contains("mode-modal")) {
-    setPlayerMode("docked");
-  }
-});
-
-dockToggleBtn.addEventListener("click", () => {
-  if (playerOverlay.classList.contains("mode-docked")) {
-    setPlayerMode("modal");
-  } else {
-    setPlayerMode("docked");
-  }
-});
-
 document.getElementById("close-player-btn").addEventListener("click", () => {
-  setPlayerMode("closed");
-});
-
-document.getElementById("pip-close-btn").addEventListener("click", (e) => {
-  e.stopPropagation();
-  setPlayerMode("closed");
-});
-
-document.getElementById("pip-shield").addEventListener("click", (e) => {
-  if (e.target.closest("#pip-close-btn")) return;
-  if (pipState.moved) {
-    pipState.moved = false;
-    return;
-  }
-  setPlayerMode("modal");
+  showPlayer(false);
 });
 
 window.addEventListener("resize", () => {
-  if (playerOverlay.classList.contains("mode-docked")) {
-    applyPipBounds();
+  if (!playerShell.classList.contains("hidden")) {
+    applyPlayerBounds();
   }
 });
 
 if (typeof interact !== "undefined") {
   interact(playerShell)
     .draggable({
-      ignoreFrom: "#pip-close-btn",
+      ignoreFrom: "button, .vjs-control-bar, input",
       listeners: {
-        start() {
-          pipState.moved = false;
-        },
         move(event) {
-          if (!playerOverlay.classList.contains("mode-docked")) return;
-          pipState.moved = true;
-          pipState.x += event.dx;
-          pipState.y += event.dy;
-          applyPipBounds();
+          winState.x += event.dx;
+          winState.y += event.dy;
+          applyPlayerBounds();
         },
       },
     })
     .resizable({
       edges: { left: true, right: true, bottom: true, top: true },
       margin: 12,
-      ignoreFrom: "#pip-close-btn",
+      ignoreFrom: "button, .vjs-control-bar",
       listeners: {
-        start() {
-          pipState.moved = true;
-        },
         move(event) {
-          if (!playerOverlay.classList.contains("mode-docked")) return;
-          pipState.moved = true;
           let newW = event.rect.width;
           if ((event.edges.top || event.edges.bottom) && !event.edges.left && !event.edges.right) {
-            newW = event.rect.height * (16 / 9);
+            newW = (event.rect.height - 38) * (16 / 9);
           }
-          newW = Math.max(220, Math.min(window.innerWidth - 24, newW));
-          const prevW = pipState.w;
-          const prevH = prevW * (9 / 16);
-          const newH = newW * (9 / 16);
+          newW = Math.max(260, Math.min(window.innerWidth - 20, newW));
+          const prevW = winState.w;
+          const prevH = prevW * (9 / 16) + 38;
+          const newH = newW * (9 / 16) + 38;
           if (event.edges.left) {
-            pipState.x += prevW - newW;
+            winState.x += prevW - newW;
           }
           if (event.edges.top) {
-            pipState.y += prevH - newH;
+            winState.y += prevH - newH;
           }
-          pipState.w = newW;
-          applyPipBounds();
+          winState.w = newW;
+          applyPlayerBounds();
         },
       },
     });
 }
 
 document.addEventListener("keydown", (e) => {
-  if (playerOverlay.classList.contains("hidden")) return;
+  if (playerShell.classList.contains("hidden")) return;
   if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
   if (e.key === "Escape") {
     e.preventDefault();
-    setPlayerMode("closed");
+    showPlayer(false);
     return;
   }
   const step = e.shiftKey ? 10 : 5;
