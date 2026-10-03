@@ -256,78 +256,84 @@
 
 <dialog id="split-modal-popover" class="modal">
   <div class="modal-box max-w-4xl p-4 md:p-6 flex flex-col gap-4">
+    <!-- Modal Header -->
     <div class="flex items-center justify-between border-b border-base-content/10 pb-3">
       <div class="flex items-center gap-2">
         <h3 class="font-bold text-base">✂ Split Scene Assistant</h3>
         <span id="split-target-badge" class="badge badge-primary font-mono text-xs"></span>
       </div>
-      <button id="close-split-modal" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-base-200/60 rounded-box border border-base-content/10 text-xs">
-      <span class="font-semibold text-base-content/70">Jump to Cut:</span>
-      <div class="flex flex-wrap items-center gap-2">
-        <div class="join">
-          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="black" data-jump-dir="prev" data-tippy-content="Jump to closest previous black fade">⏮ Black</button>
-          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="black" data-jump-dir="next" data-tippy-content="Jump to closest next black fade">Black ⏭</button>
-        </div>
-        <div class="join">
-          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="visual" data-jump-dir="prev" data-tippy-content="Jump to closest previous visual cut">⏮ Visual</button>
-          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="visual" data-jump-dir="next" data-tippy-content="Jump to closest next visual cut">Visual ⏭</button>
-        </div>
-        <div class="join">
-          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="chapter" data-jump-dir="prev" data-tippy-content="Jump to closest previous chapter boundary">⏮ Chapter</button>
-          <button type="button" class="btn btn-outline btn-xs join-item" data-jump-kind="chapter" data-jump-dir="next" data-tippy-content="Jump to closest next chapter boundary">Chapter ⏭</button>
-        </div>
+      <div class="flex items-center gap-2">
+        <button id="split-use-playhead-btn" class="btn btn-outline btn-xs" type="button" data-tippy-content="Sync split time to current video playhead">Use Playhead</button>
+        <button id="split-preview-btn" class="btn btn-ghost btn-xs" type="button" data-tippy-content="Play video from split point">▶ Preview</button>
+        <button id="close-split-modal" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box border border-base-content/10">
+    <!-- Hero 3-Point Transition Stage -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">
+      <!-- Left: Nearest Prior Cut -->
+      <div id="split-prev-hero" class="card bg-base-200 border border-base-content/10 p-2.5 flex flex-col gap-1.5 justify-between transition-all"></div>
+
+      <!-- Center: Active Split Cut Target (Hero) -->
+      <div id="split-center-hero" class="card bg-base-200 border-2 border-primary/80 shadow-md p-2.5 flex flex-col gap-1.5 justify-between">
         <div class="flex items-center justify-between">
-          <span class="font-semibold text-xs">◀ Previous 3 Candidates</span>
-          <span class="text-[11px] text-base-content/60">Before split point</span>
+          <span class="badge badge-primary badge-xs font-semibold uppercase tracking-wider">✂ Active Split Point</span>
+          <span id="split-center-time-label" class="text-xs font-mono font-bold text-primary"></span>
         </div>
-        <div id="split-prev-cands" class="grid grid-cols-3 gap-1.5 min-h-[130px]"></div>
+        <div id="split-thumb" class="relative aspect-video w-full rounded bg-base-300 overflow-hidden bg-no-repeat border border-base-content/20 shadow-inner"></div>
+        <div class="text-[11px] text-center text-base-content/70 font-mono" id="split-center-desc">Exact subdivision boundary</div>
       </div>
 
-      <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box border border-base-content/10">
-        <div class="flex items-center justify-between">
-          <span class="font-semibold text-xs">Next 3 Candidates ▶</span>
-          <span class="text-[11px] text-base-content/60">After split point</span>
+      <!-- Right: Nearest Next Cut -->
+      <div id="split-next-hero" class="card bg-base-200 border border-base-content/10 p-2.5 flex flex-col gap-1.5 justify-between transition-all"></div>
+    </div>
+
+    <!-- Candidate Filmstrip Ribbon -->
+    <div class="flex flex-col gap-1.5 p-2.5 bg-base-200/60 rounded-box border border-base-content/10">
+      <div class="flex items-center justify-between text-xs px-1">
+        <span class="font-semibold text-base-content/80">Candidate Cuts Timeline</span>
+        <span class="text-[11px] text-base-content/50">Click any card to snap split point</span>
+      </div>
+      <div id="split-ribbon-cands" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 min-h-[90px]"></div>
+    </div>
+
+    <!-- Unified Transport & Nudge Bar -->
+    <div class="flex flex-col md:flex-row items-center justify-between gap-3 p-3 bg-base-200 rounded-box border border-base-content/10">
+      <div class="join w-full md:w-auto justify-center">
+        <button id="split-prev-cut-btn" class="btn btn-outline btn-sm join-item" type="button" data-tippy-content="Jump to previous detected cut (←)">◀ Prev Cut</button>
+        <button type="button" class="btn btn-outline btn-sm join-item font-mono" data-nudge-split="-1">-1s</button>
+        <button type="button" class="btn btn-outline btn-sm join-item font-mono" data-nudge-split="-0.1">-0.1s</button>
+        <input id="split-time-input" class="input input-bordered input-sm join-item font-mono text-xs w-28 text-center" placeholder="00:00:00.000" />
+        <button type="button" class="btn btn-outline btn-sm join-item font-mono" data-nudge-split="0.1">+0.1s</button>
+        <button type="button" class="btn btn-outline btn-sm join-item font-mono" data-nudge-split="1">+1s</button>
+        <button id="split-next-cut-btn" class="btn btn-outline btn-sm join-item" type="button" data-tippy-content="Jump to next detected cut (→)">Next Cut ▶</button>
+      </div>
+
+      <!-- Two-Tone Visual Split Proportion Bar -->
+      <div class="flex flex-col gap-1 flex-1 min-w-[200px] w-full">
+        <div class="flex items-center justify-between text-[11px] font-mono">
+          <span id="split-left-label" class="text-primary truncate"></span>
+          <span id="split-right-label" class="text-secondary truncate"></span>
         </div>
-        <div id="split-next-cands" class="grid grid-cols-3 gap-1.5 min-h-[130px]"></div>
+        <div id="split-prop-bar" class="w-full h-2.5 bg-base-300 rounded-full overflow-hidden flex shadow-inner">
+          <div id="split-prop-left" class="bg-primary h-full transition-all"></div>
+          <div id="split-prop-right" class="bg-secondary h-full transition-all"></div>
+        </div>
       </div>
     </div>
 
-    <div class="flex flex-col md:flex-row items-center gap-4 p-3 bg-base-200 rounded-box border border-base-content/10">
-      <div id="split-thumb" class="relative aspect-video w-36 rounded bg-base-300 overflow-hidden shrink-0 bg-no-repeat border border-base-content/20 shadow-sm"></div>
-      <div class="flex flex-col gap-2 flex-1 w-full">
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs font-semibold">Split Timestamp:</span>
-          <input id="split-time-input" class="input input-bordered input-sm flex-1 font-mono text-xs min-w-[140px]" placeholder="00:00:00.000" />
-          <button type="button" id="split-use-playhead-btn" class="btn btn-outline btn-sm">Use Playhead</button>
-          <button type="button" id="split-preview-btn" class="btn btn-ghost btn-sm">▶ Preview in Player</button>
-        </div>
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex flex-wrap gap-1">
-            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="-5">-5s</button>
-            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="-1">-1s</button>
-            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="-0.1">-0.1s</button>
-            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="0.1">+0.1s</button>
-            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="1">+1s</button>
-            <button type="button" class="btn btn-ghost btn-xs" data-nudge-split="5">+5s</button>
-          </div>
-          <span id="split-segment-info" class="text-xs text-base-content/70 font-mono"></span>
-        </div>
+    <!-- Modal Footer -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-base-content/10">
+      <div class="text-[11px] text-base-content/60 flex items-center gap-1.5 font-mono">
+        <kbd class="kbd kbd-xs">←</kbd> / <kbd class="kbd kbd-xs">→</kbd> Prev/Next Cut
+        <span>·</span>
+        <kbd class="kbd kbd-xs">Space</kbd> Preview
+        <span>·</span>
+        <kbd class="kbd kbd-xs">Enter</kbd> Split
       </div>
-    </div>
-
-    <div class="flex items-center justify-between pt-2 border-t border-base-content/10">
-      <span class="text-xs text-base-content/60">Selecting a candidate updates split timestamp &amp; sliding context.</span>
       <div class="flex items-center gap-2">
         <button id="cancel-split-btn" class="btn btn-ghost btn-sm" type="button">Cancel</button>
-        <button id="confirm-split-btn" class="btn btn-primary btn-sm" type="button">✂ Split Scene Here</button>
+        <button id="confirm-split-btn" class="btn btn-primary btn-sm font-semibold" type="button">✂ Split Scene Here</button>
       </div>
     </div>
   </div>

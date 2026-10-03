@@ -150,28 +150,93 @@ export function getSlidingCandidateCuts(targetT) {
   const prevPool = allCands.filter((c) => c.timestamp < targetT - 0.05);
   const nextPool = allCands.filter((c) => c.timestamp > targetT + 0.05);
 
+  const nearestPrev = prevPool.length ? prevPool[prevPool.length - 1] : null;
+  const nearestNext = nextPool.length ? nextPool[0] : null;
+
   const prev3 = prevPool.slice(-3);
   const next3 = nextPool.slice(0, 3);
 
-  return { prev: prev3, next: next3 };
+  return { nearestPrev, nearestNext, prev3, next3, allPrev: prevPool, allNext: nextPool };
 }
 
-export function renderCandidateCards(containerEl, cands, targetT, onSelect) {
+export function renderHeroCutCard(containerEl, cand, targetT, isLeft, onSelect) {
   if (!containerEl) return;
   containerEl.innerHTML = "";
 
-  if (!cands || !cands.length) {
+  if (!cand) {
+    containerEl.className = "card bg-base-200/40 border border-dashed border-base-content/10 p-3 flex flex-col items-center justify-center text-center opacity-60 min-h-[140px]";
+    const msg = document.createElement("div");
+    msg.className = "text-xs text-base-content/50 italic";
+    msg.textContent = isLeft ? "◀ Start of Video (No prior cut)" : "End of Video (No next cut) ▶";
+    containerEl.appendChild(msg);
+    return;
+  }
+
+  containerEl.className = "card bg-base-200 border border-base-content/15 p-2.5 flex flex-col gap-1.5 justify-between hover:border-primary/60 transition-all cursor-pointer group";
+
+  const head = document.createElement("div");
+  head.className = "flex items-center justify-between";
+  const title = document.createElement("span");
+  title.className = "text-[11px] font-semibold text-base-content/70 flex items-center gap-1 group-hover:text-primary transition-colors";
+  title.textContent = isLeft ? "◀ Nearest Prior Cut" : "Nearest Next Cut ▶";
+
+  const delta = cand.timestamp - targetT;
+  const deltaBadge = document.createElement("span");
+  deltaBadge.className = "badge badge-neutral badge-xs font-mono";
+  deltaBadge.textContent = `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}s`;
+
+  head.appendChild(title);
+  head.appendChild(deltaBadge);
+
+  const thumb = document.createElement("div");
+  thumb.className = "relative aspect-video w-full rounded bg-base-300 overflow-hidden bg-no-repeat border border-base-content/10 shadow-sm";
+  setCellSpriteFrame(thumb, cand.timestamp);
+  attachHoverPreviewVideo(thumb, () => cand.timestamp);
+
+  const foot = document.createElement("div");
+  foot.className = "flex items-center justify-between text-[11px] mt-0.5";
+
+  const row = document.createElement("div");
+  row.className = "flex items-center gap-1.5 min-w-0";
+  const dot = document.createElement("span");
+  dot.className = `cut-dot inline-block w-2 h-2 rounded-full shrink-0 ${cutDotColorClass(cand.kind || "start")}`;
+  const tsSpan = document.createElement("span");
+  tsSpan.className = "font-mono font-bold";
+  tsSpan.textContent = fmtHmsMs(cand.timestamp);
+  row.appendChild(dot);
+  row.appendChild(tsSpan);
+
+  const lbl = document.createElement("span");
+  lbl.className = "text-[10px] text-base-content/60 truncate max-w-[65px] text-right font-medium";
+  lbl.textContent = cand.label;
+
+  foot.appendChild(row);
+  foot.appendChild(lbl);
+
+  containerEl.appendChild(head);
+  containerEl.appendChild(thumb);
+  containerEl.appendChild(foot);
+
+  containerEl.addEventListener("click", () => onSelect(cand.timestamp));
+}
+
+export function renderRibbonCards(containerEl, prev3, next3, targetT, onSelect) {
+  if (!containerEl) return;
+  containerEl.innerHTML = "";
+
+  const combined = [...prev3, ...next3];
+  if (!combined.length) {
     const emptyMsg = document.createElement("div");
-    emptyMsg.className = "col-span-3 flex items-center justify-center h-28 text-xs text-base-content/40 italic";
-    emptyMsg.textContent = "No nearby candidates detected";
+    emptyMsg.className = "col-span-full flex items-center justify-center h-16 text-xs text-base-content/40 italic";
+    emptyMsg.textContent = "No neighboring candidates detected";
     containerEl.appendChild(emptyMsg);
     return;
   }
 
-  cands.forEach((cand) => {
+  combined.forEach((cand) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "split-cand-card btn btn-outline btn-sm h-auto flex flex-col p-1 text-left justify-start items-stretch font-normal rounded-box border-base-content/20 hover:border-primary transition-all";
+    btn.className = "split-cand-card btn btn-outline btn-xs h-auto flex flex-col p-1 text-left justify-start items-stretch font-normal rounded border-base-content/20 hover:border-primary transition-all";
     btn.dataset.ts = cand.timestamp;
     btn.dataset.tippyContent = cand.detail || cand.label;
 
@@ -182,25 +247,25 @@ export function renderCandidateCards(containerEl, cands, targetT, onSelect) {
 
     const delta = cand.timestamp - targetT;
     const deltaBadge = document.createElement("span");
-    deltaBadge.className = "absolute top-1 right-1 px-1 py-0.5 rounded bg-black/80 text-[10px] text-white font-mono pointer-events-none";
+    deltaBadge.className = "absolute top-0.5 right-0.5 px-1 py-0.2 rounded bg-black/80 text-[9px] text-white font-mono pointer-events-none";
     deltaBadge.textContent = `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}s`;
     thumb.appendChild(deltaBadge);
 
     const meta = document.createElement("div");
-    meta.className = "flex items-center justify-between gap-1.5 mt-1 px-0.5 w-full";
+    meta.className = "flex items-center justify-between gap-1 mt-1 px-0.5 w-full";
 
     const row = document.createElement("div");
     row.className = "flex items-center gap-1 min-w-0 shrink-0";
     const dot = document.createElement("span");
-    dot.className = `cut-dot inline-block w-2 h-2 rounded-full shrink-0 ${cutDotColorClass(cand.kind || "start")}`;
+    dot.className = `cut-dot inline-block w-1.5 h-1.5 rounded-full shrink-0 ${cutDotColorClass(cand.kind || "start")}`;
     const tsSpan = document.createElement("span");
-    tsSpan.className = "text-[11px] font-mono font-semibold shrink-0";
+    tsSpan.className = "text-[10px] font-mono font-semibold shrink-0";
     tsSpan.textContent = fmtHms(cand.timestamp);
     row.appendChild(dot);
     row.appendChild(tsSpan);
 
     const lbl = document.createElement("span");
-    lbl.className = "text-[10px] text-base-content/60 truncate max-w-[55px] shrink-0 text-right ml-auto";
+    lbl.className = "text-[9px] text-base-content/60 truncate max-w-[45px] shrink-0 text-right ml-auto";
     lbl.textContent = cand.label;
 
     meta.appendChild(row);
@@ -240,45 +305,53 @@ export function updateSplitCandidates(targetT, updateInput = false) {
   if (dom.splitTargetBadge) {
     dom.splitTargetBadge.textContent = fmtHmsMs(t);
   }
+  if (dom.splitCenterTimeLabel) {
+    dom.splitCenterTimeLabel.textContent = fmtHmsMs(t);
+  }
   if (dom.splitThumb) {
     setCellSpriteFrame(dom.splitThumb, t);
   }
 
-  const { prev, next } = getSlidingCandidateCuts(t);
-  renderCandidateCards(dom.splitPrevCands, prev, t, (ts) => updateSplitCandidates(ts, true));
-  renderCandidateCards(dom.splitNextCands, next, t, (ts) => updateSplitCandidates(ts, true));
+  const { nearestPrev, nearestNext, prev3, next3 } = getSlidingCandidateCuts(t);
 
-  if (dom.splitSegmentInfo) {
-    const chap = getActiveChapterAt(t);
-    const leftDur = Math.max(0, t - chap.start_time);
-    const rightDur = Math.max(0, chap.end_time - t);
-    dom.splitSegmentInfo.textContent = `Scene #${chap.id}: [${fmtHms(chap.start_time)} → ${fmtHms(chap.end_time)}] ➔ ${fmtHms(leftDur)} + ${fmtHms(rightDur)}`;
+  renderHeroCutCard(dom.splitPrevHero, nearestPrev, t, true, (ts) => updateSplitCandidates(ts, true));
+  renderHeroCutCard(dom.splitNextHero, nearestNext, t, false, (ts) => updateSplitCandidates(ts, true));
+
+  renderRibbonCards(dom.splitRibbonCands, prev3, next3, t, (ts) => updateSplitCandidates(ts, true));
+
+  if (dom.splitPrevCutBtn) {
+    dom.splitPrevCutBtn.disabled = !nearestPrev;
+  }
+  if (dom.splitNextCutBtn) {
+    dom.splitNextCutBtn.disabled = !nearestNext;
+  }
+
+  // Update Two-Tone Proportion Bar
+  const chap = getActiveChapterAt(t);
+  const totalChapDur = Math.max(0.1, chap.end_time - chap.start_time);
+  const leftDur = Math.max(0, t - chap.start_time);
+  const rightDur = Math.max(0, chap.end_time - t);
+  const leftPct = Math.max(1, Math.min(99, (leftDur / totalChapDur) * 100));
+  const rightPct = 100 - leftPct;
+
+  if (dom.splitPropLeft) dom.splitPropLeft.style.width = `${leftPct.toFixed(1)}%`;
+  if (dom.splitPropRight) dom.splitPropRight.style.width = `${rightPct.toFixed(1)}%`;
+  if (dom.splitLeftLabel) {
+    dom.splitLeftLabel.textContent = `Part A: ${fmtHms(leftDur)} (${Math.round(leftPct)}%)`;
+  }
+  if (dom.splitRightLabel) {
+    dom.splitRightLabel.textContent = `Part B: ${fmtHms(rightDur)} (${Math.round(rightPct)}%)`;
   }
 }
 
-export function jumpSemanticCut(kind, direction) {
+export function jumpCandidate(direction) {
   const currentT = parseTimeInput(dom.splitTimeInput?.value) || ((player && player.currentTime()) || 0);
-  const allCands = getActiveCandidateCuts();
+  const { nearestPrev, nearestNext } = getSlidingCandidateCuts(currentT);
 
-  const matching = allCands.filter((c) => {
-    if (kind === "black") return c.kind === "black";
-    if (kind === "visual") return c.kind === "visual";
-    if (kind === "chapter") return c.kind === "start" || c.kind === "subdivide" || c.kind === "manual";
-    return true;
-  });
-
-  if (direction === "prev") {
-    const prevMatches = matching.filter((c) => c.timestamp < currentT - 0.05);
-    if (prevMatches.length) {
-      const target = prevMatches[prevMatches.length - 1];
-      updateSplitCandidates(target.timestamp, true);
-    }
-  } else if (direction === "next") {
-    const nextMatches = matching.filter((c) => c.timestamp > currentT + 0.05);
-    if (nextMatches.length) {
-      const target = nextMatches[0];
-      updateSplitCandidates(target.timestamp, true);
-    }
+  if (direction === "prev" && nearestPrev) {
+    updateSplitCandidates(nearestPrev.timestamp, true);
+  } else if (direction === "next" && nearestNext) {
+    updateSplitCandidates(nearestNext.timestamp, true);
   }
 }
 
@@ -342,12 +415,12 @@ export function initSplitModal(onChaptersChanged) {
     });
   });
 
-  document.querySelectorAll("[data-jump-kind]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const kind = btn.dataset.jumpKind;
-      const dir = btn.dataset.jumpDir;
-      jumpSemanticCut(kind, dir);
-    });
+  dom.splitPrevCutBtn?.addEventListener("click", () => {
+    jumpCandidate("prev");
+  });
+
+  dom.splitNextCutBtn?.addEventListener("click", () => {
+    jumpCandidate("next");
   });
 
   dom.splitUsePlayheadBtn?.addEventListener("click", () => {
@@ -384,5 +457,41 @@ export function initSplitModal(onChaptersChanged) {
     const playheadT = (player && player.currentTime()) || 0;
     const chap = getActiveChapterAt(playheadT);
     await promptAndExportScene(chap, "cut");
+  });
+
+  // Global modal keyboard shortcuts
+  document.addEventListener("keydown", (e) => {
+    if (!dom.splitModalPopover?.open) return;
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmSplit(onChaptersChanged);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        const cur = parseTimeInput(dom.splitTimeInput?.value) || 0;
+        updateSplitCandidates(cur - 1, true);
+      } else {
+        jumpCandidate("prev");
+      }
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        const cur = parseTimeInput(dom.splitTimeInput?.value) || 0;
+        updateSplitCandidates(cur + 1, true);
+      } else {
+        jumpCandidate("next");
+      }
+    } else if (e.key === " " || e.key === "k") {
+      e.preventDefault();
+      dom.splitPreviewBtn?.click();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      confirmSplit(onChaptersChanged);
+    }
   });
 }

@@ -94,10 +94,13 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert 'id="pref-show-cut-dot"' in html
             assert "cut-dot" in html
             assert 'id="split-modal-popover"' in html
-            assert 'id="split-prev-cands"' in html
-            assert 'id="split-next-cands"' in html
-            assert 'data-jump-kind="black"' in html
-            assert 'data-jump-kind="visual"' in html
+            assert 'id="split-prev-hero"' in html
+            assert 'id="split-center-hero"' in html
+            assert 'id="split-next-hero"' in html
+            assert 'id="split-prev-cut-btn"' in html
+            assert 'id="split-next-cut-btn"' in html
+            assert 'id="split-ribbon-cands"' in html
+            assert 'id="split-prop-bar"' in html
             assert 'id="reveal-file-btn"' in html
             assert "ph-folder-open" in html
             assert 'value="black-fades"' in html
