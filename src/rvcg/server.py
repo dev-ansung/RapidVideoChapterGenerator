@@ -287,8 +287,17 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 cell_times=cells,
                 card_dur=c_dur,
             )
+            raw_out = str(payload.get("output_path", "")).strip()
+            out_target: Path | None = None
+            if raw_out:
+                cand = Path(raw_out).expanduser()
+                if cand.is_dir() or raw_out.endswith("/"):
+                    slug = f"{int(s_t) // 3600:02d}-{(int(s_t) % 3600) // 60:02d}-{int(s_t) % 60:02d}"
+                    out_target = (cand / f"cut_{seg.id_str}_{slug}.mp4").resolve()
+                else:
+                    out_target = (cand if cand.suffix else cand.with_suffix(".mp4")).resolve()
             try:
-                out_file = export_scene_cut(vid_path, seg)
+                out_file = export_scene_cut(vid_path, seg, output_path=out_target)
                 self._send_json(
                     200,
                     json.dumps(

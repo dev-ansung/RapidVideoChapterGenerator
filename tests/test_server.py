@@ -136,10 +136,12 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
         )
         assert "00:00:00 - Opening" in str(exported.get("content", ""))
 
+        custom_dest = tmp_path / "custom_exports" / "my_scene_01.mp4"
         scene_exported = _post_json(
             f"{base_url}/api/chapters/export-scene",
             {
                 "path": str(vid),
+                "output_path": str(custom_dest),
                 "scene": {
                     "scene_number": 1,
                     "start_time": 0.0,
@@ -152,6 +154,7 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
         )
         assert scene_exported.get("ok") is True
         out_scene_path = Path(str(scene_exported.get("path", "")))
+        assert out_scene_path == custom_dest.resolve()
         assert out_scene_path.exists()
 
         scan_start = _post_json(
