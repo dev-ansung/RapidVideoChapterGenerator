@@ -353,9 +353,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
 
             if not use_existing:
                 segments = solve_boundaries(duration, raw_scan, cfg, on_phase)
-                on_phase(5, 0.5, 1.0, f"muxing {len(segments)} chapters (-c copy)...")
-                embed_chapters_atomic(video_path, segments, output_path=None)
-                on_phase(5, 1.0, 1.0, f"{len(segments)} chapters embedded")
+                on_phase(5, 1.0, 1.0, f"{len(segments)} chapters ready")
 
             assert sprite_meta is not None
             sprite_abs = browser_dir / sprite_meta.url
@@ -372,6 +370,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                         "type": "complete",
                         "video_path": str(video_path),
                         "video_name": unicodedata.normalize("NFC", video_path.name),
+                        "already_embedded": use_existing,
                         "sprite": sprite_payload.to_dict(),
                         "chapters": [s.to_dict() for s in segments],
                         "subtitles": [t.to_dict() for t in sub_tracks],
