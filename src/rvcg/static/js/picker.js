@@ -142,7 +142,7 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
   if (dom.statBlack) dom.statBlack.textContent = payload.enable_black_fades ? "scanning..." : "off";
   if (dom.statVisual) dom.statVisual.textContent = payload.enable_visual_cuts ? "scanning..." : "off";
   if (dom.statSub) dom.statSub.textContent = payload.enable_subdivide ? "waiting..." : "off";
-  if (dom.scanLog) dom.scanLog.value = `[Start] ${baseName} | min=${payload.min_seg}s workers=${payload.workers} | Stage1(black)=${payload.enable_black_fades ? payload.black_min_dur + "s" : "OFF"} Stage2(visual)=${payload.enable_visual_cuts ? payload.threshold : "OFF"} Stage3(sub)=${payload.enable_subdivide ? payload.max_seg + "s->" + payload.target_seg + "s" : "OFF"}`;
+  if (dom.scanLog) dom.scanLog.value = `[Start] ${baseName} | min=${payload.min_seg}s workers=${payload.workers} | Stage1(fades)=${payload.enable_black_fades ? payload.black_min_dur + "s" : "OFF"} Stage2(visual)=${payload.enable_visual_cuts ? payload.threshold : "OFF"} Stage3(sub)=${payload.enable_subdivide ? payload.max_seg + "s->" + payload.target_seg + "s" : "OFF"}`;
 
   const startData = await startScanJob(payload);
   if (!startData.ok) {
@@ -187,7 +187,8 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
         if (dom.statBlack) {
           const usedFades = (state.lastStats.used_black || 0) + (state.lastStats.used_white || 0);
           const rawFades = (state.lastStats.raw_black || 0) + (state.lastStats.raw_white || 0);
-          dom.statBlack.textContent = payload.enable_black_fades ? `${usedFades} cuts (${rawFades} raw)` : `off (${rawFades} raw)`;
+          const breakdown = (state.lastStats.used_white || 0) > 0 ? ` (${state.lastStats.used_black}b/${state.lastStats.used_white}w)` : "";
+          dom.statBlack.textContent = payload.enable_black_fades ? `${usedFades} cuts${breakdown} (${rawFades} raw)` : `off (${rawFades} raw)`;
         }
         if (dom.statVisual) dom.statVisual.textContent = payload.enable_visual_cuts ? `${state.lastStats.used_visual} cuts (${state.lastStats.raw_visual} raw)` : `off (${state.lastStats.raw_visual} raw)`;
         if (dom.statSub) dom.statSub.textContent = payload.enable_subdivide ? `+${state.lastStats.sub_cuts} cuts (${state.lastStats.snapped_cuts} snapped)` : "off";

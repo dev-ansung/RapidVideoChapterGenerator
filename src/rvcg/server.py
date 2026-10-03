@@ -467,7 +467,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 on_phase(5, 1.0, 1.0, f"{len(segments)} chapters ready")
             else:
                 on_phase(1, 1.0, 1.0, f"0 chapters ({cfg.workers}-worker keyframe scan)")
-                on_phase(2, 0.0, duration, "0 black fades · 0 visual cuts")
+                on_phase(2, 0.0, duration, "0 black · 0 white · 0 visual cuts")
                 segments = []
 
             with ThreadPoolExecutor(max_workers=2) as ex:

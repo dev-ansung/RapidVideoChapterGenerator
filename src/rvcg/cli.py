@@ -310,7 +310,7 @@ def process_video(
             handle_phase(5, 1.0, 1.0, f"{len(segments)} chapters ready")
         else:
             handle_phase(1, 1.0, 1.0, f"0 chapters ({config.workers}-worker keyframe scan)")
-            handle_phase(2, 0.0, duration, "0 black fades · 0 visual cuts")
+            handle_phase(2, 0.0, duration, "0 black · 0 white · 0 visual cuts")
             segments = []
 
         if want_browse:
