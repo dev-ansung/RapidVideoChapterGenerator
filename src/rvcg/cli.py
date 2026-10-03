@@ -30,6 +30,7 @@ from rvcg.muxer import embed_chapters_atomic, format_chapters_export
 from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters
 from rvcg.renderer import write_index_html
 from rvcg.scanner import scan_keyframes
+from rvcg.server import create_lifecycle_server
 from rvcg.solver import segments_from_tuples, solve_boundaries
 
 console = Console(stderr=True)
@@ -123,7 +124,13 @@ def build_parser() -> argparse.ArgumentParser:
         prog="rapid-chapters",
         description="Rapid keyframe-accelerated video scene boundary detector and lossless chapter marker injector.",
     )
-    parser.add_argument("video", nargs="?", type=Path, default=None, help="Path to target video file")
+    parser.add_argument(
+        "video",
+        nargs="?",
+        type=Path,
+        default=None,
+        help="Path to target video file (omit to launch Web Lifecycle Studio)",
+    )
     parser.add_argument("-t", "--threshold", type=float, default=None, help="Visual cut sensitivity (0.0 to 1.0)")
     parser.add_argument(
         "-m", "--min-scene-len", type=str, default=None, help="Minimum duration between chapters (e.g. 180, 3m)"
@@ -163,9 +170,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--title-template", type=str, default="Scene {n:02d}", help="Chapter naming template")
     parser.add_argument("--browse", action="store_true", help="Launch interactive 3x3 HTML5 scene browser")
+    parser.add_argument("--ui", action="store_true", help="Launch Web Lifecycle Studio server")
     parser.add_argument(
-        "--no-open", action="store_true", help="Do not open browser window automatically when --browse is used"
+        "--cli-prompt",
+        action="store_true",
+        help="Use interactive terminal prompt instead of Web Lifecycle Studio when no video is given",
     )
+    parser.add_argument("--port", type=int, default=0, help="Port for Web Lifecycle Studio (default: auto)")
+    parser.add_argument("--no-open", action="store_true", help="Do not open browser window automatically")
     parser.add_argument(
         "--refresh", action="store_true", help="Force re-scan even if embedded chapters or cached browser exist"
     )
@@ -357,15 +369,47 @@ def process_video(
         )
 
 
+def run_web_studio(
+    default_dir: Path, config: BoundaryConfig, initial_video: Path | None, port: int, no_open: bool
+) -> None:
+    server = create_lifecycle_server(
+        default_dir=default_dir,
+        default_config=config,
+        initial_video=initial_video,
+        port=port,
+    )
+    raw_host = server.server_address[0]
+    host = raw_host.decode("utf-8") if isinstance(raw_host, (bytes, bytearray)) else raw_host
+    bound_port = int(server.server_address[1])
+    url = f"http://{host}:{bound_port}/"
+    console.print(
+        f"[bold green]✓ Web Lifecycle Studio running at[/bold green] [bold cyan]{url}[/bold cyan] [dim](Ctrl+C to stop)[/dim]"
+    )
+    if not no_open:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        console.print("\n[dim]Shutting down Web Lifecycle Studio...[/dim]")
+    finally:
+        server.server_close()
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     os.environ["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + os.environ.get("PATH", "")
     parser = build_parser()
     args = parser.parse_args(argv)
     config = resolve_config(args)
 
+    if args.ui or (args.video is None and not args.cli_prompt):
+        init_vid = args.video.expanduser().resolve() if args.video is not None else None
+        base_dir = init_vid.parent if init_vid is not None else Path.cwd()
+        run_web_studio(base_dir, config, init_vid, int(args.port), bool(args.no_open))
+        return
+
     if args.video is not None:
         process_video(args.video.expanduser().resolve(), args, config, interactive=False)
-        if not sys.stdin.isatty() or args.format != "mp4":
+        if not sys.stdin.isatty() or args.format != "mp4" or not args.cli_prompt:
             return
         console.print()
 

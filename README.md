@@ -85,9 +85,9 @@ Or write to a separate output container:
 rapid-chapters input.mp4 -o output.mp4
 ```
 
-### 2. Interactive Terminal Mode (Drag & Drop)
+### 2. Web Lifecycle Studio (No-Argument Frontend)
 
-Run without arguments to list videos in the current directory or drag-and-drop files in a continuous loop:
+Run without arguments (or pass `--ui`) to launch the **Web Lifecycle Studio** in your browser—handling directory/file selection, live 5-phase SSE progress, 3×3 contact-sheet browsing, interactive chapter editing (rename, split at playhead, delete/merge), and lossless `-c copy` saving:
 
 ```bash
 rapid-chapters
