@@ -35,11 +35,11 @@ export function renderGallery(onChaptersChanged) {
     card.dataset.index = index;
 
     const header = document.createElement("div");
-    header.className = "flex items-center justify-between px-3 py-2 border-b border-base-content/10 bg-base-300/50 cursor-pointer select-none";
+    header.className = "card-header flex items-center justify-between px-3 py-2 border-b border-base-content/10 bg-base-300/50 cursor-pointer select-none";
     header.addEventListener("click", () => openAt(index, item.start_time, highlightActiveCard));
 
     const hLeft = document.createElement("div");
-    hLeft.className = "flex items-center gap-2 flex-1 min-w-0 mr-2";
+    hLeft.className = "card-header-left flex items-center gap-2 flex-1 min-w-0 mr-2";
 
     const cutDot = document.createElement("span");
     cutDot.className = `cut-dot inline-block w-2.5 h-2.5 rounded-full shrink-0 ${cutDotColorClass(item.cut_kind || "start")}`;
@@ -75,7 +75,7 @@ export function renderGallery(onChaptersChanged) {
     hLeft.appendChild(titleInput);
 
     const hRight = document.createElement("div");
-    hRight.className = "flex items-center gap-2 shrink-0";
+    hRight.className = "card-header-right flex items-center gap-2 shrink-0";
 
     const metaSpan = document.createElement("span");
     metaSpan.className = "text-xs text-base-content/60 font-mono";
@@ -119,7 +119,7 @@ export function renderGallery(onChaptersChanged) {
     header.appendChild(hRight);
 
     const grid = document.createElement("div");
-    grid.className = "contact-grid grid grid-cols-3 grid-rows-3 aspect-video list-view-grid:aspect-[144/9] gap-0.5 bg-black/20 p-1";
+    grid.className = "contact-grid grid grid-cols-3 grid-rows-3 aspect-video gap-0.5 bg-black/20 p-1";
 
     const slots = item.cell_times.length >= 9 ? item.cell_times.slice(0, 9) : item.cell_times;
     slots.forEach((baseTime) => {

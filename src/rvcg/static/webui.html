@@ -8,6 +8,71 @@
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
 <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet" />
+<style type="text/tailwindcss">
+  #vjs-player,
+  #vjs-player .vjs-tech {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+  }
+  .vjs-chapter-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: rgba(255, 255, 255, 0.75);
+    pointer-events: none;
+    z-index: 10;
+  }
+  .gallery.list-view .chapter-card {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .gallery.list-view .card-header {
+    width: 240px;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    border-right: 1px solid var(--color-base-content, rgba(255, 255, 255, 0.1));
+    border-bottom: none;
+    gap: 8px;
+    padding: 12px;
+  }
+  .gallery.list-view .card-header-left {
+    width: 100%;
+    margin-right: 0;
+  }
+  .gallery.list-view .card-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .gallery.list-view .contact-grid {
+    flex: 1;
+    aspect-ratio: 144 / 9;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: 1fr;
+  }
+  @media (max-width: 768px) {
+    .gallery.list-view .chapter-card {
+      flex-direction: column;
+    }
+    .gallery.list-view .card-header {
+      width: 100%;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      border-right: none;
+      border-bottom: 1px solid var(--color-base-content, rgba(255, 255, 255, 0.1));
+    }
+    .gallery.list-view .contact-grid {
+      aspect-ratio: 16 / 9;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+    }
+  }
+</style>
 </head>
 <body class="bg-base-100 text-base-content min-h-screen">
 
@@ -159,7 +224,7 @@
 </main>
 
 <div id="player-shell" class="player-shell fixed z-50 bg-base-300 border border-base-content/20 rounded-box shadow-2xl flex flex-col overflow-hidden hidden">
-  <div class="flex items-center justify-between px-3 py-2 bg-base-200 border-b border-base-content/10 cursor-move select-none">
+  <div class="flex items-center justify-between px-3 py-2 bg-base-200 border-b border-base-content/10 cursor-move select-none shrink-0">
     <div class="flex items-center gap-2 min-w-0 mr-2">
       <span id="now-badge" class="badge badge-primary badge-sm font-mono shrink-0"></span>
       <span id="now-title" class="font-semibold text-xs truncate"></span>
@@ -178,7 +243,7 @@
       <button id="close-player-btn" class="btn btn-ghost btn-xs btn-circle" type="button">✕</button>
     </div>
   </div>
-  <div class="relative w-full aspect-video bg-black flex-1">
+  <div class="relative w-full aspect-video bg-black flex-1 overflow-hidden">
     <video id="vjs-player" class="video-js vjs-big-play-centered w-full h-full" controls playsinline preload="metadata"></video>
   </div>
 </div>

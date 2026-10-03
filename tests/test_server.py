@@ -121,7 +121,7 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
                     assert "function isInPip()" in js_body
                     assert "if (!isInPip())" in js_body
                 if mod_name == "gallery.js":
-                    assert "144/9" in js_body
+                    assert "list-view" in js_body
 
         try:
             urllib.request.urlopen(f"{base_url}/static/../server.py", timeout=5)
