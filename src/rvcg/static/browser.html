@@ -413,9 +413,18 @@ function applyPlayerBounds() {
   playerShell.style.setProperty("--win-w", `${Math.round(winState.w)}px`);
 }
 
+function isInPip() {
+  const v = (player.el && player.el().querySelector("video")) || document.querySelector("#vjs-player video");
+  return Boolean(
+    document.pictureInPictureElement ||
+    (typeof player.isInPictureInPicture === "function" && player.isInPictureInPicture()) ||
+    (v && v.webkitPresentationMode === "picture-in-picture")
+  );
+}
+
 function showPlayer(visible) {
   if (!visible) {
-    player.pause();
+    if (!isInPip()) player.pause();
     playerShell.classList.add("hidden");
     return;
   }
@@ -512,7 +521,9 @@ function openAt(index, seekTime) {
   nowRange.textContent = item.source_range + " (" + item.duration_str + ")";
   highlightActiveCard();
 
-  showPlayer(true);
+  if (!isInPip()) {
+    showPlayer(true);
+  }
 
   if (sourceLoaded) {
     player.currentTime(seekTime);
@@ -594,7 +605,7 @@ if (typeof interact !== "undefined") {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (playerShell.classList.contains("hidden")) return;
+  if (playerShell.classList.contains("hidden") && !isInPip()) return;
   if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
   if (e.key === "Escape") {
     e.preventDefault();

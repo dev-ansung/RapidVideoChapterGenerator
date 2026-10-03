@@ -77,6 +77,8 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             assert "Export Scene" in html
             assert html.count('class="field-group" data-tippy-content=') == 6
             assert 'tippy(document.querySelectorAll(".settings-row .field-group")' in html
+            assert "function isInPip()" in html
+            assert "if (!isInPip())" in html
 
         fs_data = _get_json(f"{base_url}/api/fs")
         videos = fs_data.get("videos")
