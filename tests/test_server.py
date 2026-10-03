@@ -66,6 +66,10 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
         with urllib.request.urlopen(f"{base_url}/", timeout=5) as root_resp:
             html = root_resp.read().decode("utf-8")
             assert "RapidVideoChapterGenerator" in html
+            assert 'id="picker-view"' in html
+            assert 'id="browser-view"' in html
+            assert "aspect-ratio: 144 / 9" in html
+            assert "mode-docked" in html
 
         fs_data = _get_json(f"{base_url}/api/fs")
         videos = fs_data.get("videos")

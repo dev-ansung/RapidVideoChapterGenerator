@@ -51,7 +51,7 @@ def test_merge_and_sample_merges_short_tail() -> None:
     assert segments[0].start_time == 0.0
     assert segments[0].end_time == 412.0
     assert segments[0].title == "Chapter 1"
-    assert len(segments[0].cell_times) == 8
+    assert len(segments[0].cell_times) == 9
 
 
 def test_solve_boundaries_preset_and_callback() -> None:
