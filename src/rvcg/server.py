@@ -464,15 +464,10 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             use_existing = len(existing) >= 2
             if use_existing:
                 on_phase(1, 1.0, 1.0, f"{len(existing)} embedded chapters found")
-                on_phase(2, duration, duration, "skipped (chapters found)")
-                on_phase(3, 1.0, 1.0, "skipped (chapters found)")
-                on_phase(4, 1.0, 1.0, "skipped (chapters found)")
-                segments = segments_from_tuples(existing, cfg.card_dur)
-                on_phase(5, 1.0, 1.0, f"{len(segments)} chapters ready")
+                on_phase(2, 0.0, duration, f"scanning transitions ({cfg.workers} workers)...")
             else:
                 on_phase(1, 1.0, 1.0, f"0 chapters ({cfg.workers}-worker keyframe scan)")
                 on_phase(2, 0.0, duration, "0 black · 0 white · 0 visual cuts")
-                segments = []
 
             with ThreadPoolExecutor(max_workers=2) as ex:
                 scan_fut = ex.submit(
@@ -482,8 +477,8 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                     cfg,
                     browser_dir,
                     True,
-                    use_existing,
-                    None if use_existing else on_phase,
+                    False,
+                    on_phase,
                     on_sprite,
                 )
                 sub_fut = ex.submit(extract_subtitles, video_path, browser_dir)
@@ -491,11 +486,17 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 sub_tracks = sub_fut.result()
 
             if use_existing:
+                on_phase(3, 1.0, 1.0, f"kept {len(existing)} embedded chapters")
+                on_phase(4, 1.0, 1.0, "skipped (using embedded chapters)")
+                segments = segments_from_tuples(existing, cfg.card_dur)
+                on_phase(5, 1.0, 1.0, f"{len(segments)} chapters ready")
                 stats = BoundaryStats(
                     raw_black=len(raw_scan.black_points),
+                    raw_white=len(raw_scan.white_points),
                     raw_visual=len(raw_scan.visual_cuts),
                     logs=[
                         f"[Embedded] Loaded {len(segments)} existing chapters from container metadata",
+                        f"[Scan] Transition candidates: {len(raw_scan.black_points)} black, {len(raw_scan.white_points)} white, {len(raw_scan.visual_cuts)} visual",
                         *[f"[Result] #{s.id_str} {s.title}: {s.source_range} ({s.duration_str})" for s in segments],
                     ],
                 )
@@ -512,20 +513,19 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 rows=sprite_meta.rows,
                 total_frames=sprite_meta.total_frames,
             )
-            candidates_list = (
-                [
-                    {
-                        "timestamp": s.start_time,
-                        "kind": "embedded",
-                        "score": 2.0,
-                        "detail": f"Chapter #{s.id_str}: {s.title}",
-                    }
-                    for s in segments
-                    if s.start_time > 0
-                ]
-                if use_existing
-                else raw_scan.to_candidates_list()
-            )
+            candidates_list = raw_scan.to_candidates_list()
+            if use_existing:
+                for s in segments:
+                    if s.start_time > 0:
+                        candidates_list.append(
+                            {
+                                "timestamp": s.start_time,
+                                "kind": "embedded",
+                                "score": 2.0,
+                                "detail": f"Chapter #{s.id_str}: {s.title}",
+                            }
+                        )
+                candidates_list.sort(key=lambda x: float(x.get("timestamp", 0.0)))
             push_event(
                 json.dumps(
                     {
