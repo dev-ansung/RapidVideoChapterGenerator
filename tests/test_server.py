@@ -94,6 +94,7 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert "cut-dot" in html
             assert 'id="export-scene-dropdown"' in html
             assert 'id="manual-export-popover"' in html
+            assert 'id="manual-include-intro"' in html
             assert 'data-export-mode="chapter"' in html
             assert 'data-export-mode="nearest"' in html
             assert 'data-export-mode="manual"' in html

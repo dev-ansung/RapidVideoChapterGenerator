@@ -120,3 +120,94 @@ def test_export_scene_cut_creates_valid_video(tmp_path: Path) -> None:
     assert out_file.name == "cut_01_00-00-00.mp4"
     dur = probe_duration(out_file)
     assert dur >= 4.5
+
+
+def test_export_scene_cut_stream_integrity_and_no_intro(tmp_path: Path) -> None:
+    import json
+
+    vid = tmp_path / "titanic_like.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=s=320x180:r=25:d=6",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=48000:d=6",
+            "-c:v",
+            "libx264",
+            "-g",
+            "50",
+            "-video_track_timescale",
+            "12800",
+            "-c:a",
+            "aac",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            str(vid),
+        ],
+        stdin=subprocess.DEVNULL,
+        check=True,
+    )
+    seg = SceneSegment(
+        index=2,
+        start_time=1.0,
+        end_time=5.0,
+        title="Scene 02",
+        cell_times=[1.2, 1.6, 2.0, 2.4, 2.8, 3.2, 3.6, 4.0],
+        card_dur=1.5,
+    )
+
+    out_with_intro = export_scene_cut(vid, seg, output_path=tmp_path / "with_intro.mp4", include_intro=True)
+    dec_intro = subprocess.run(
+        ["ffmpeg", "-nostdin", "-v", "error", "-i", str(out_with_intro), "-f", "null", "-"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert dec_intro.returncode == 0
+    assert dec_intro.stderr.strip() == ""
+    probe_intro = json.loads(
+        subprocess.check_output(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "stream=codec_type,duration",
+                "-of",
+                "json",
+                str(out_with_intro),
+            ],
+            encoding="utf-8",
+        )
+    )
+    for st in probe_intro["streams"]:
+        assert abs(float(st["duration"]) - 5.5) < 0.45
+
+    out_direct = export_scene_cut(vid, seg, output_path=tmp_path / "direct_trim.mp4", include_intro=False)
+    dec_direct = subprocess.run(
+        ["ffmpeg", "-nostdin", "-v", "error", "-i", str(out_direct), "-f", "null", "-"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert dec_direct.returncode == 0
+    assert dec_direct.stderr.strip() == ""
+    probe_direct = json.loads(
+        subprocess.check_output(
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,duration", "-of", "json", str(out_direct)],
+            encoding="utf-8",
+        )
+    )
+    for st in probe_direct["streams"]:
+        assert abs(float(st["duration"]) - 4.0) < 0.45

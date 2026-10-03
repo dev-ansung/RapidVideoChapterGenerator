@@ -172,7 +172,7 @@
     font-size: 11.5px;
     color: var(--muted);
   }
-  .field-group input {
+  .settings-panel .field-group input {
     width: 66px;
   }
   .field-group input:disabled {
@@ -881,12 +881,12 @@
   .trim-fine-box {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding-top: 6px;
+    gap: 10px;
+    padding-top: 8px;
     border-top: 1px solid var(--border);
   }
   .trim-preview-thumb {
-    width: 104px;
+    width: 112px;
     aspect-ratio: 16 / 9;
     border-radius: 4px;
     border: 1px solid var(--border);
@@ -899,9 +899,32 @@
   .trim-fine-controls {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
     flex: 1;
     min-width: 0;
+  }
+  .trim-time-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .trim-time-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    width: 38px;
+    flex-shrink: 0;
+  }
+  .trim-time-input {
+    flex: 1;
+    min-width: 118px;
+    font-family: Menlo, Monaco, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    padding: 5px 8px;
   }
   .trim-nudge-btns {
     display: flex;
@@ -909,8 +932,10 @@
     gap: 4px;
   }
   .trim-nudge-btns button {
-    padding: 2px 6px;
+    padding: 3px 7px;
     font-size: 10.5px;
+    flex: 1;
+    text-align: center;
   }
   .trim-footer {
     display: flex;
@@ -919,18 +944,52 @@
     background: var(--panel-alt);
     border: 1px solid var(--border);
     border-radius: 7px;
-    padding: 10px 12px;
+    padding: 12px 14px;
   }
   .trim-footer-inputs {
     display: grid;
-    grid-template-columns: 180px 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr 220px;
+    gap: 12px;
+    align-items: end;
+  }
+  .trim-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .trim-field.disabled {
+    opacity: 0.45;
+  }
+  .trim-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .trim-path-input {
+    width: 100%;
+    font-family: Menlo, Monaco, monospace;
+    font-size: 11.5px;
+    padding: 6px 10px;
+  }
+  .trim-title-input {
+    width: 100%;
+    font-size: 12px;
+    padding: 6px 10px;
   }
   .trim-footer-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+  }
+  .trim-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     flex-wrap: wrap;
   }
   .export-textarea {
@@ -1162,15 +1221,18 @@
         <div class="trim-fine-box">
           <div id="manual-start-thumb" class="trim-preview-thumb"></div>
           <div class="trim-fine-controls">
-            <label class="field-group">Start Timestamp (HH:MM:SS.mmm or sec)
-              <input id="manual-start-input" class="text-input w-full" />
-            </label>
+            <div class="trim-time-row">
+              <span class="trim-time-label">Start</span>
+              <input id="manual-start-input" class="text-input trim-time-input" placeholder="00:00:00.000" />
+              <button type="button" id="manual-start-playhead-btn">Use Playhead</button>
+            </div>
             <div class="trim-nudge-btns">
+              <button type="button" data-nudge-start="-5">-5s</button>
               <button type="button" data-nudge-start="-1">-1s</button>
               <button type="button" data-nudge-start="-0.1">-0.1s</button>
               <button type="button" data-nudge-start="0.1">+0.1s</button>
               <button type="button" data-nudge-start="1">+1s</button>
-              <button type="button" id="manual-start-playhead-btn">Use Playhead</button>
+              <button type="button" data-nudge-start="5">+5s</button>
             </div>
           </div>
         </div>
@@ -1185,15 +1247,18 @@
         <div class="trim-fine-box">
           <div id="manual-end-thumb" class="trim-preview-thumb"></div>
           <div class="trim-fine-controls">
-            <label class="field-group">End Timestamp (HH:MM:SS.mmm or sec)
-              <input id="manual-end-input" class="text-input w-full" />
-            </label>
+            <div class="trim-time-row">
+              <span class="trim-time-label">End</span>
+              <input id="manual-end-input" class="text-input trim-time-input" placeholder="00:00:00.000" />
+              <button type="button" id="manual-end-playhead-btn">Use Playhead</button>
+            </div>
             <div class="trim-nudge-btns">
+              <button type="button" data-nudge-end="-5">-5s</button>
               <button type="button" data-nudge-end="-1">-1s</button>
               <button type="button" data-nudge-end="-0.1">-0.1s</button>
               <button type="button" data-nudge-end="0.1">+0.1s</button>
               <button type="button" data-nudge-end="1">+1s</button>
-              <button type="button" id="manual-end-playhead-btn">Use Playhead</button>
+              <button type="button" data-nudge-end="5">+5s</button>
             </div>
           </div>
         </div>
@@ -1202,15 +1267,23 @@
 
     <div class="trim-footer">
       <div class="trim-footer-inputs">
-        <label class="field-group">Scene Title
-          <input id="manual-title-input" class="text-input w-full" />
+        <label class="trim-field">
+          <span class="trim-field-label">Output File Path</span>
+          <input id="manual-path-input" class="text-input trim-path-input" spellcheck="false" />
         </label>
-        <label class="field-group">Output File Path
-          <input id="manual-path-input" class="text-input w-full" />
+        <label id="manual-title-field" class="trim-field">
+          <span class="trim-field-label">Intro Title</span>
+          <input id="manual-title-input" class="text-input trim-title-input" />
         </label>
       </div>
       <div class="trim-footer-actions">
-        <span id="manual-dur-label" class="count-label"></span>
+        <div class="trim-footer-left">
+          <span id="manual-dur-label" class="count-label"></span>
+          <label class="pref-toggle-row">
+            <input id="manual-include-intro" type="checkbox" checked />
+            <span>Include 3×3 intro card</span>
+          </label>
+        </div>
         <div class="toolbar-right">
           <button id="manual-preview-btn" type="button">▶ Preview Start in Player</button>
           <button id="run-manual-export-btn" class="primary" type="button">⬇ Export Trim</button>
@@ -2072,9 +2145,26 @@ const manualEndInput = document.getElementById("manual-end-input");
 const manualStartThumb = document.getElementById("manual-start-thumb");
 const manualEndThumb = document.getElementById("manual-end-thumb");
 const manualTitleInput = document.getElementById("manual-title-input");
+const manualTitleField = document.getElementById("manual-title-field");
 const manualPathInput = document.getElementById("manual-path-input");
 const manualDurLabel = document.getElementById("manual-dur-label");
 const manualPlayheadLabel = document.getElementById("manual-playhead-label");
+const manualIncludeIntro = document.getElementById("manual-include-intro");
+
+function syncManualIntroPreference() {
+  const on = Boolean(manualIncludeIntro.checked);
+  manualTitleInput.disabled = !on;
+  if (manualTitleField) manualTitleField.classList.toggle("disabled", !on);
+  try {
+    localStorage.setItem("rvcg_manual_include_intro", on ? "true" : "false");
+  } catch (_) {}
+}
+
+try {
+  manualIncludeIntro.checked = localStorage.getItem("rvcg_manual_include_intro") !== "false";
+} catch (_) {}
+syncManualIntroPreference();
+manualIncludeIntro.addEventListener("change", syncManualIntroPreference);
 
 function getTotalDuration() {
   return player.duration() || (CUTS.length ? CUTS[CUTS.length - 1].end_time : 0);
@@ -2174,7 +2264,7 @@ function buildDefaultExportPath(sceneObj, prefix = "cut") {
   return `${baseStem}_cuts/${prefix}_${sceneObj.id || "01"}_${slug}.mp4`;
 }
 
-async function executeSceneExport(sceneObj, targetOut, btnEl) {
+async function executeSceneExport(sceneObj, targetOut, btnEl, includeIntro = true) {
   if (!currentVideoPath || !targetOut || !targetOut.trim()) return false;
   const origText = btnEl.textContent;
   btnEl.disabled = true;
@@ -2184,7 +2274,12 @@ async function executeSceneExport(sceneObj, targetOut, btnEl) {
     const res = await fetch("/api/chapters/export-scene", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: currentVideoPath, scene: sceneObj, output_path: targetOut.trim() }),
+      body: JSON.stringify({
+        path: currentVideoPath,
+        scene: sceneObj,
+        output_path: targetOut.trim(),
+        include_intro: Boolean(includeIntro),
+      }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -2206,7 +2301,7 @@ async function promptAndExportScene(sceneObj, prefix = "cut") {
   const defaultOut = buildDefaultExportPath(sceneObj, prefix);
   const targetOut = window.prompt("Save exported scene to:", defaultOut);
   if (!targetOut || !targetOut.trim()) return;
-  await executeSceneExport(sceneObj, targetOut, exportSceneBtn);
+  await executeSceneExport(sceneObj, targetOut, exportSceneBtn, true);
 }
 
 function parseTimeInput(raw) {
@@ -2428,6 +2523,7 @@ function openManualExportModal() {
     syncManualTrimUI(true);
   });
 
+  syncManualIntroPreference();
   syncManualTrimUI(true);
   manualExportPopover.showModal();
 }
@@ -2490,7 +2586,8 @@ document.getElementById("run-manual-export-btn").addEventListener("click", async
   const ok = await executeSceneExport(
     sceneObj,
     manualPathInput.value.trim() || buildDefaultExportPath(sceneObj, "trim"),
-    document.getElementById("run-manual-export-btn")
+    document.getElementById("run-manual-export-btn"),
+    manualIncludeIntro.checked
   );
   if (ok) manualExportPopover.close();
 });

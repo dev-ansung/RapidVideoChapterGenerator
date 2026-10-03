@@ -324,8 +324,9 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                     out_target = (cand / f"cut_{seg.id_str}_{slug}.mp4").resolve()
                 else:
                     out_target = (cand if cand.suffix else cand.with_suffix(".mp4")).resolve()
+            include_intro = bool(payload.get("include_intro", True))
             try:
-                out_file = export_scene_cut(vid_path, seg, output_path=out_target)
+                out_file = export_scene_cut(vid_path, seg, output_path=out_target, include_intro=include_intro)
                 self._send_json(
                     200,
                     json.dumps(
