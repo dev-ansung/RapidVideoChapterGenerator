@@ -9,6 +9,16 @@ export function syncCutDotPreference() {
   } catch (_) {}
 }
 
+export function syncThemePreference() {
+  const select = document.getElementById("pref-theme-select");
+  let saved = "black";
+  try {
+    saved = localStorage.getItem("rvcg_theme") || "black";
+  } catch (_) {}
+  document.documentElement.setAttribute("data-theme", saved);
+  if (select) select.value = saved;
+}
+
 export function syncSettingsInputsFromConfig() {
   const setMin = document.getElementById("set-cfg-min");
   const setBlackDur = document.getElementById("set-cfg-black-dur");
@@ -21,6 +31,7 @@ export function syncSettingsInputsFromConfig() {
   if (setTh && dom.cfgTh) setTh.value = dom.cfgTh.value;
   if (setMax && dom.cfgMax) setMax.value = dom.cfgMax.value;
   if (setTarget && dom.cfgTarget) setTarget.value = dom.cfgTarget.value;
+  syncThemePreference();
 }
 
 export function initSettingsAndExport() {
@@ -30,8 +41,16 @@ export function initSettingsAndExport() {
     }
   } catch (_) {}
   syncCutDotPreference();
+  syncThemePreference();
 
   dom.prefShowCutDot?.addEventListener("change", syncCutDotPreference);
+  document.getElementById("pref-theme-select")?.addEventListener("change", (e) => {
+    const val = e.target.value || "black";
+    document.documentElement.setAttribute("data-theme", val);
+    try {
+      localStorage.setItem("rvcg_theme", val);
+    } catch (_) {}
+  });
 
   const setMin = document.getElementById("set-cfg-min");
   const setBlackDur = document.getElementById("set-cfg-black-dur");

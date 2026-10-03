@@ -91,6 +91,8 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert 'id="stat-sub"' in html
             assert 'id="scan-log"' in html
             assert 'id="settings-popover"' in html
+            assert 'id="pref-theme-select"' in html
+            assert 'data-theme="black"' in html
             assert 'id="pref-show-cut-dot"' in html
             assert "cut-dot" in html
             assert 'id="prev-cut-btn"' in html
