@@ -73,6 +73,7 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             assert "interact.min.js" in html
             assert 'id="pip-shield"' in html
             assert 'id="pip-close-btn"' in html
+            assert "tippy-bundle.umd.min.js" in html
 
         fs_data = _get_json(f"{base_url}/api/fs")
         videos = fs_data.get("videos")

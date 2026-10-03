@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RapidVideoChapterGenerator</title>
 <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy.css" rel="stylesheet" />
 <style>
   :root {
     --bg: #0b0c10;
@@ -122,9 +123,9 @@
     width: 66px;
   }
   .file-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     max-height: 360px;
     overflow-y: auto;
   }
@@ -132,13 +133,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
     background: var(--panel-alt);
     border: 1px solid var(--border);
     border-radius: 5px;
-    padding: 6px 10px;
+    padding: 7px 11px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 12.5px;
     text-align: left;
   }
   .file-item:hover {
@@ -149,12 +152,25 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: 600;
+    min-width: 0;
+    flex: 1;
   }
   .file-meta {
     font-size: 11px;
     color: var(--muted);
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
+  }
+  .tippy-box {
+    background-color: #1b1f2e;
+    border: 1px solid var(--accent);
+    color: var(--text);
+    font-size: 12px;
+    word-break: break-all;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75);
+  }
+  .tippy-arrow {
+    color: #1b1f2e;
   }
 
   .progress-box {
@@ -782,6 +798,8 @@
 
 <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy-bundle.umd.min.js"></script>
 <script>
 const DEFAULT_CFG = __DEFAULT_CFG__;
 let currentDir = __INIT_DIR__;
@@ -1004,7 +1022,15 @@ async function loadDirectory(dirPath) {
   data.dirs.forEach((d) => {
     const btn = document.createElement("button");
     btn.className = "file-item";
-    btn.innerHTML = `<span class="file-name">📁 ${d.name}</span><span class="file-meta">Folder</span>`;
+    btn.dataset.tippyContent = d.name;
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "file-name";
+    nameSpan.textContent = `📁 ${d.name}`;
+    const metaSpan = document.createElement("span");
+    metaSpan.className = "file-meta";
+    metaSpan.textContent = "Folder";
+    btn.appendChild(nameSpan);
+    btn.appendChild(metaSpan);
     btn.addEventListener("click", () => loadDirectory(d.path));
     fileGrid.appendChild(btn);
   });
@@ -1012,10 +1038,27 @@ async function loadDirectory(dirPath) {
   data.videos.forEach((v) => {
     const btn = document.createElement("button");
     btn.className = "file-item";
-    btn.innerHTML = `<span class="file-name">🎬 ${v.name}</span><span class="file-meta">${v.size_mb} MB</span>`;
+    btn.dataset.tippyContent = v.name;
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "file-name";
+    nameSpan.textContent = `🎬 ${v.name}`;
+    const metaSpan = document.createElement("span");
+    metaSpan.className = "file-meta";
+    metaSpan.textContent = `${v.size_mb} MB`;
+    btn.appendChild(nameSpan);
+    btn.appendChild(metaSpan);
     btn.addEventListener("click", () => startScan(v.path, false));
     fileGrid.appendChild(btn);
   });
+
+  if (typeof tippy !== "undefined") {
+    tippy(fileGrid.querySelectorAll(".file-item"), {
+      placement: "top-start",
+      delay: [60, 0],
+      maxWidth: 680,
+      appendTo: () => document.body,
+    });
+  }
 }
 
 function setPhaseUI(id, pct, info) {
