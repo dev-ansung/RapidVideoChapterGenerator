@@ -21,25 +21,8 @@ export function syncThemePreference() {
 }
 
 export function syncSettingsInputsFromConfig() {
-  const setMin = document.getElementById("set-cfg-min");
-  const setBlackDur = document.getElementById("set-cfg-black-dur");
-  const setTh = document.getElementById("set-cfg-th");
-  const setMax = document.getElementById("set-cfg-max");
-  const setTarget = document.getElementById("set-cfg-target");
   const setWorkers = document.getElementById("set-cfg-workers");
-  const setEnBlack = document.getElementById("set-cfg-enable-black");
-  const setEnVisual = document.getElementById("set-cfg-enable-visual");
-  const setEnSub = document.getElementById("set-cfg-enable-sub");
-
-  if (setMin && dom.cfgMin) setMin.value = dom.cfgMin.value;
-  if (setBlackDur && dom.cfgBlackDur) setBlackDur.value = dom.cfgBlackDur.value;
-  if (setTh && dom.cfgTh) setTh.value = dom.cfgTh.value;
-  if (setMax && dom.cfgMax) setMax.value = dom.cfgMax.value;
-  if (setTarget && dom.cfgTarget) setTarget.value = dom.cfgTarget.value;
   if (setWorkers && dom.cfgWorkers) setWorkers.value = dom.cfgWorkers.value;
-  if (setEnBlack && dom.cfgEnableBlack) setEnBlack.checked = dom.cfgEnableBlack.checked;
-  if (setEnVisual && dom.cfgEnableVisual) setEnVisual.checked = dom.cfgEnableVisual.checked;
-  if (setEnSub && dom.cfgEnableSub) setEnSub.checked = dom.cfgEnableSub.checked;
   syncThemePreference();
 }
 
@@ -112,39 +95,31 @@ export function initSettingsAndExport() {
     });
   });
 
-  const setMin = document.getElementById("set-cfg-min");
-  const setBlackDur = document.getElementById("set-cfg-black-dur");
-  const setTh = document.getElementById("set-cfg-th");
-  const setMax = document.getElementById("set-cfg-max");
-  const setTarget = document.getElementById("set-cfg-target");
   const setWorkers = document.getElementById("set-cfg-workers");
-  const setEnBlack = document.getElementById("set-cfg-enable-black");
-  const setEnVisual = document.getElementById("set-cfg-enable-visual");
-  const setEnSub = document.getElementById("set-cfg-enable-sub");
-
-  const wireTwoWay = (setEl, cfgEl, isCheckbox = false) => {
-    if (!setEl || !cfgEl) return;
-    setEl.addEventListener("change", () => {
-      if (isCheckbox) cfgEl.checked = setEl.checked;
-      else cfgEl.value = setEl.value;
+  if (setWorkers && dom.cfgWorkers) {
+    setWorkers.addEventListener("change", () => {
+      dom.cfgWorkers.value = setWorkers.value;
       saveSettingsToLocalStorage();
     });
-    cfgEl.addEventListener("change", () => {
-      if (isCheckbox) setEl.checked = cfgEl.checked;
-      else setEl.value = cfgEl.value;
+    dom.cfgWorkers.addEventListener("change", () => {
+      setWorkers.value = dom.cfgWorkers.value;
       saveSettingsToLocalStorage();
     });
-  };
+  }
 
-  wireTwoWay(setMin, dom.cfgMin);
-  wireTwoWay(setBlackDur, dom.cfgBlackDur);
-  wireTwoWay(setTh, dom.cfgTh);
-  wireTwoWay(setMax, dom.cfgMax);
-  wireTwoWay(setTarget, dom.cfgTarget);
-  wireTwoWay(setWorkers, dom.cfgWorkers);
-  wireTwoWay(setEnBlack, dom.cfgEnableBlack, true);
-  wireTwoWay(setEnVisual, dom.cfgEnableVisual, true);
-  wireTwoWay(setEnSub, dom.cfgEnableSub, true);
+  [
+    dom.cfgMin,
+    dom.cfgBlackDur,
+    dom.cfgTh,
+    dom.cfgMax,
+    dom.cfgTarget,
+    dom.cfgWorkers,
+    dom.cfgEnableBlack,
+    dom.cfgEnableVisual,
+    dom.cfgEnableSub,
+  ].forEach((el) => {
+    el?.addEventListener("change", saveSettingsToLocalStorage);
+  });
 
   document.querySelectorAll(".open-settings-btn").forEach((btn) => {
     btn.addEventListener("click", () => {

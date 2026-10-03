@@ -30,25 +30,60 @@ class BoundaryConfig:
     workers: int = 8
     scene_threshold: float = 0.38
     black_min_dur: float = 0.4
+    black_pic_th: float = 0.95
+    white_pic_th: float = 0.95
+    black_pix_th: float = 0.12
+    white_pix_th: float = 0.10
     enable_black_fades: bool = True
     enable_white_fades: bool = True
-    enable_visual_cuts: bool = True
-    enable_subdivide: bool = True
+    enable_visual_cuts: bool = False
+    enable_subdivide: bool = False
     card_dur: float = 8.4
     title_template: str = "Scene {n:02d}"
 
     @classmethod
     def from_preset(cls, preset: str) -> "BoundaryConfig":
-        if preset == "black-fades":
+        if preset in ("default", "black-fades", "fades"):
             return cls(
-                enable_black_fades=True, enable_white_fades=True, enable_visual_cuts=False, enable_subdivide=False
+                enable_black_fades=True,
+                enable_white_fades=True,
+                enable_visual_cuts=False,
+                enable_subdivide=False,
+            )
+        if preset == "all-stages":
+            return cls(
+                enable_black_fades=True,
+                enable_white_fades=True,
+                enable_visual_cuts=True,
+                enable_subdivide=True,
             )
         if preset == "podcast":
-            return cls(min_seg=120.0, max_seg=900.0, target_seg=450.0, scene_threshold=0.45)
+            return cls(
+                min_seg=120.0,
+                max_seg=900.0,
+                target_seg=450.0,
+                scene_threshold=0.45,
+                enable_visual_cuts=True,
+                enable_subdivide=True,
+            )
         if preset == "presentation":
-            return cls(min_seg=60.0, max_seg=600.0, target_seg=300.0, scene_threshold=0.30)
+            return cls(
+                min_seg=60.0,
+                max_seg=600.0,
+                target_seg=300.0,
+                scene_threshold=0.30,
+                enable_visual_cuts=True,
+                enable_subdivide=True,
+            )
         if preset == "action":
-            return cls(min_seg=90.0, max_seg=420.0, target_seg=240.0, scene_threshold=0.35)
+            return cls(
+                min_seg=90.0,
+                max_seg=420.0,
+                target_seg=240.0,
+                scene_threshold=0.35,
+                enable_visual_cuts=True,
+                enable_subdivide=True,
+            )
         return cls()
 
 

@@ -171,11 +171,15 @@ def scan_keyframes(
             th = config.scene_threshold
             bd = max(0.05, config.black_min_dur)
             with_sprite = build_sprite and spec.strip_path is not None
+            blk_pic_th = config.black_pic_th
+            wht_pic_th = config.white_pic_th
+            blk_pix_th = config.black_pix_th
+            wht_pix_th = config.white_pix_th
             if with_sprite and spec.strip_path is not None:
                 fc = (
                     f"[0:v]scale=240:135:flags=fast_bilinear,split=3[vd_blk][vd_wht][vs];"
-                    f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gt(scene,{th})',metadata=print:file=-[vnull1];"
-                    f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:key=lavfi.black_start:file=-[vnull2];"
+                    f"[vd_blk]blackdetect=d={bd}:pix_th={blk_pix_th}:pic_th={blk_pic_th},select='gt(scene,{th})',metadata=print:file=-[vnull1];"
+                    f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th={wht_pic_th}:pix_th={wht_pix_th},metadata=print:key=lavfi.black_start:file=-[vnull2];"
                     f"[vs]fps=1/{interval},tile={cols}x{spec.n_rows}[vspr]"
                 )
                 cmd = [
@@ -219,8 +223,8 @@ def scan_keyframes(
             else:
                 fc = (
                     f"[0:v]scale=240:135:flags=fast_bilinear,split=2[vd_blk][vd_wht];"
-                    f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gt(scene,{th})',metadata=print:file=-[vnull1];"
-                    f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:key=lavfi.black_start:file=-[vnull2]"
+                    f"[vd_blk]blackdetect=d={bd}:pix_th={blk_pix_th}:pic_th={blk_pic_th},select='gt(scene,{th})',metadata=print:file=-[vnull1];"
+                    f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th={wht_pic_th}:pix_th={wht_pix_th},metadata=print:key=lavfi.black_start:file=-[vnull2]"
                 )
                 cmd = [
                     "ffmpeg",

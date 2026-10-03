@@ -103,7 +103,13 @@ def test_solve_boundaries_stage_toggles() -> None:
         white_points=[500.0],
         visual_cuts=[VisualCut(timestamp=700.0, score=0.92), VisualCut(timestamp=1150.0, score=0.61)],
     )
-    segs, stats = solve_boundaries_with_stats(1800.0, full_raw, BoundaryConfig())
+    # Default is fades-only
+    default_segs, default_stats = solve_boundaries_with_stats(1800.0, full_raw, BoundaryConfig())
+    assert len(default_segs) == 3
+    assert [s.cut_kind for s in default_segs] == ["start", "black", "white"]
+
+    # all-stages preset tests full multi-stage pipeline
+    segs, stats = solve_boundaries_with_stats(1800.0, full_raw, BoundaryConfig.from_preset("all-stages"))
     assert len(segs) == 6
     assert [s.cut_kind for s in segs] == ["start", "black", "white", "visual", "visual", "subdiv"]
     assert "Black fade" in segs[1].cut_detail

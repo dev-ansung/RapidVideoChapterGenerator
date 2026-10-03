@@ -226,8 +226,8 @@ export function initPicker(onScanComplete) {
   if (dom.cfgTh) dom.cfgTh.value = defaultCfg.threshold ?? 0.38;
   if (dom.cfgBlackDur) dom.cfgBlackDur.value = defaultCfg.black_min_dur ?? 0.4;
   if (dom.cfgEnableBlack) dom.cfgEnableBlack.checked = defaultCfg.enable_black_fades ?? true;
-  if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = defaultCfg.enable_visual_cuts ?? true;
-  if (dom.cfgEnableSub) dom.cfgEnableSub.checked = defaultCfg.enable_subdivide ?? true;
+  if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = defaultCfg.enable_visual_cuts ?? false;
+  if (dom.cfgEnableSub) dom.cfgEnableSub.checked = defaultCfg.enable_subdivide ?? false;
   if (dom.cfgWorkers) dom.cfgWorkers.value = defaultCfg.workers ?? 8;
 
   [dom.cfgEnableBlack, dom.cfgEnableVisual, dom.cfgEnableSub].forEach((el) => {
@@ -239,10 +239,17 @@ export function initPicker(onScanComplete) {
     const p = e.target.value;
     if (dom.cfgEnableBlack) dom.cfgEnableBlack.checked = true;
     if (dom.cfgBlackDur) dom.cfgBlackDur.value = 0.4;
-    if (p === "black-fades") {
+    if (p === "default" || p === "black-fades") {
       if (dom.cfgMin) dom.cfgMin.value = 180;
       if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = false;
       if (dom.cfgEnableSub) dom.cfgEnableSub.checked = false;
+    } else if (p === "all-stages") {
+      if (dom.cfgMin) dom.cfgMin.value = 180;
+      if (dom.cfgMax) dom.cfgMax.value = 600;
+      if (dom.cfgTarget) dom.cfgTarget.value = 360;
+      if (dom.cfgTh) dom.cfgTh.value = 0.38;
+      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = true;
+      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = true;
     } else if (p === "podcast") {
       if (dom.cfgMin) dom.cfgMin.value = 120;
       if (dom.cfgMax) dom.cfgMax.value = 900;
@@ -269,8 +276,8 @@ export function initPicker(onScanComplete) {
       if (dom.cfgMax) dom.cfgMax.value = 600;
       if (dom.cfgTarget) dom.cfgTarget.value = 360;
       if (dom.cfgTh) dom.cfgTh.value = 0.38;
-      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = true;
-      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = true;
+      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = false;
+      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = false;
     }
     syncStageUI();
   });
