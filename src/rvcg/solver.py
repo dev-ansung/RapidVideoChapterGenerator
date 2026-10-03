@@ -13,7 +13,7 @@ def compute_cell_times(start_t: float, end_t: float, card_dur: float = 8.4) -> l
     seg_dur = max(1.0, end_t - start_t)
     margin = min(10.0, seg_dur * 0.06)
     usable = max(1.0, seg_dur - 2 * margin - card_dur)
-    return [round(start_t + margin + (k / 7.0) * usable, 2) for k in range(8)]
+    return [round(start_t + margin + (k / 8.0) * usable, 2) for k in range(9)]
 
 
 def format_chapter_title(template: str, index: int) -> str:
@@ -158,5 +158,5 @@ def solve_boundaries(
         card_dur=config.card_dur,
         title_template=config.title_template,
     )
-    emit(5, 1.0, 1.0, f"{len(segments)} chapters · {len(segments) * 8} grid cells")
+    emit(5, 1.0, 1.0, f"{len(segments)} chapters · {len(segments) * 9} grid cells")
     return segments
