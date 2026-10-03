@@ -10,13 +10,14 @@ export function syncCutDotPreference() {
 }
 
 export function syncThemePreference() {
-  const select = document.getElementById("pref-theme-select");
   let saved = "black";
   try {
     saved = localStorage.getItem("rvcg_theme") || "black";
   } catch (_) {}
   document.documentElement.setAttribute("data-theme", saved);
-  if (select) select.value = saved;
+  document.querySelectorAll(".theme-switcher-select, #pref-theme-select").forEach((el) => {
+    el.value = saved;
+  });
 }
 
 export function syncSettingsInputsFromConfig() {
@@ -44,12 +45,17 @@ export function initSettingsAndExport() {
   syncThemePreference();
 
   dom.prefShowCutDot?.addEventListener("change", syncCutDotPreference);
-  document.getElementById("pref-theme-select")?.addEventListener("change", (e) => {
-    const val = e.target.value || "black";
-    document.documentElement.setAttribute("data-theme", val);
-    try {
-      localStorage.setItem("rvcg_theme", val);
-    } catch (_) {}
+  document.querySelectorAll(".theme-switcher-select, #pref-theme-select").forEach((el) => {
+    el.addEventListener("change", (e) => {
+      const val = e.target.value || "black";
+      document.documentElement.setAttribute("data-theme", val);
+      document.querySelectorAll(".theme-switcher-select, #pref-theme-select").forEach((other) => {
+        other.value = val;
+      });
+      try {
+        localStorage.setItem("rvcg_theme", val);
+      } catch (_) {}
+    });
   });
 
   const setMin = document.getElementById("set-cfg-min");

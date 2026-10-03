@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>RapidVideoChapterGenerator</title>
 <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+<link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
 <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet" />
@@ -82,6 +83,21 @@
       <div class="flex items-center justify-between">
         <span class="text-xl font-bold tracking-tight">RapidVideoChapterGenerator</span>
         <div class="flex items-center gap-2">
+          <select class="theme-switcher-select select select-bordered select-xs" title="Switch DaisyUI Theme">
+            <option value="black">black</option>
+            <option value="dark">dark</option>
+            <option value="night">night</option>
+            <option value="dim">dim</option>
+            <option value="sunset">sunset</option>
+            <option value="dracula">dracula</option>
+            <option value="synthwave">synthwave</option>
+            <option value="nord">nord</option>
+            <option value="forest">forest</option>
+            <option value="luxury">luxury</option>
+            <option value="light">light</option>
+            <option value="cupcake">cupcake</option>
+            <option value="emerald">emerald</option>
+          </select>
           <button type="button" id="resume-browser-btn" class="btn btn-outline btn-sm hidden">Return to Scene Browser →</button>
           <button type="button" class="open-settings-btn btn btn-ghost btn-sm">⚙ Settings</button>
         </div>
@@ -216,6 +232,21 @@
         <button type="button" class="view-btn btn btn-sm join-item btn-active" data-view="grid">Grid</button>
         <button type="button" class="view-btn btn btn-sm join-item" data-view="list">List</button>
       </div>
+      <select class="theme-switcher-select select select-bordered select-sm hidden sm:inline-flex" title="Switch DaisyUI Theme">
+        <option value="black">black</option>
+        <option value="dark">dark</option>
+        <option value="night">night</option>
+        <option value="dim">dim</option>
+        <option value="sunset">sunset</option>
+        <option value="dracula">dracula</option>
+        <option value="synthwave">synthwave</option>
+        <option value="nord">nord</option>
+        <option value="forest">forest</option>
+        <option value="luxury">luxury</option>
+        <option value="light">light</option>
+        <option value="cupcake">cupcake</option>
+        <option value="emerald">emerald</option>
+      </select>
       <button type="button" class="open-settings-btn btn btn-ghost btn-sm">⚙ Settings</button>
     </div>
   </header>
