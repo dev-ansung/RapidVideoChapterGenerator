@@ -441,13 +441,20 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 )
 
             def on_sprite(completed: float) -> None:
+                ratio = (completed / duration) if duration > 0 else 1.0
+                if ratio >= 1.0:
+                    info_text = "sprite sheet ready"
+                elif ratio >= 0.94:
+                    info_text = "stitching sprite sheet..."
+                else:
+                    info_text = "rendering sprite sheet..."
                 push_event(
                     json.dumps(
                         {
                             "type": "sprite",
                             "completed": completed,
                             "total": duration,
-                            "info": "rendering sprite sheet...",
+                            "info": info_text,
                         },
                         ensure_ascii=False,
                     )

@@ -161,6 +161,7 @@ def scan_keyframes(
     worker_cuts: dict[int, list[VisualCut]] = {c.worker_id: [] for c in chunks}
 
     if not skip_boundary_scan:
+        emit(2, 0.0, duration, "0 black · 0 white · 0 visual cuts")
 
         def run_chunk(spec: ChunkSpec) -> None:
             chunk_dur = max(0.1, spec.t_end - spec.t_start)
@@ -170,7 +171,7 @@ def scan_keyframes(
             if with_sprite and spec.strip_path is not None:
                 fc = (
                     f"[0:v]scale=240:135:flags=fast_bilinear,split=3[vd_blk][vd_wht][vs];"
-                    f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gte(scene,0)',metadata=print:file=-[vnull1];"
+                    f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gt(scene,{th})',metadata=print:file=-[vnull1];"
                     f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:key=lavfi.black_start:file=-[vnull2];"
                     f"[vs]fps=1/{interval},tile={cols}x{spec.n_rows}[vspr]"
                 )
@@ -180,14 +181,16 @@ def scan_keyframes(
                     "-y",
                     "-hide_banner",
                     "-nostats",
+                    "-progress",
+                    "pipe:1",
                     "-ss",
                     f"{spec.t_start:.2f}",
+                    "-t",
+                    f"{chunk_dur:.2f}",
                     "-skip_frame",
                     "nokey",
                     "-i",
                     str(video_path),
-                    "-t",
-                    f"{chunk_dur:.2f}",
                     "-filter_complex",
                     fc,
                     "-map",
@@ -213,7 +216,7 @@ def scan_keyframes(
             else:
                 fc = (
                     f"[0:v]scale=240:135:flags=fast_bilinear,split=2[vd_blk][vd_wht];"
-                    f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gte(scene,0)',metadata=print:file=-[vnull1];"
+                    f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gt(scene,{th})',metadata=print:file=-[vnull1];"
                     f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:key=lavfi.black_start:file=-[vnull2]"
                 )
                 cmd = [
@@ -222,14 +225,16 @@ def scan_keyframes(
                     "-y",
                     "-hide_banner",
                     "-nostats",
+                    "-progress",
+                    "pipe:1",
                     "-ss",
                     f"{spec.t_start:.2f}",
+                    "-t",
+                    f"{chunk_dur:.2f}",
                     "-skip_frame",
                     "nokey",
                     "-i",
                     str(video_path),
-                    "-t",
-                    f"{chunk_dur:.2f}",
                     "-filter_complex",
                     fc,
                     "-map",
@@ -265,7 +270,7 @@ def scan_keyframes(
                         worker_cuts[spec.worker_id].extend(ev.visual_cuts)
                         if ev.progress_sec is not None:
                             worker_prog[spec.worker_id] = max(worker_prog[spec.worker_id], ev.progress_sec)
-                        tot_prog = min(duration, sum(worker_prog.values()))
+                        tot_prog = min(duration * 0.99, sum(worker_prog.values()))
                         n_b = sum(len(v) for v in worker_blacks.values())
                         n_w = sum(len(v) for v in worker_whites.values())
                         n_c = sum(len(v) for v in worker_cuts.values())
@@ -276,7 +281,7 @@ def scan_keyframes(
             proc.wait()
             with lock:
                 worker_prog[spec.worker_id] = chunk_dur
-                tot_prog = min(duration, sum(worker_prog.values()))
+                tot_prog = min(duration * 0.99, sum(worker_prog.values()))
                 n_b = sum(len(v) for v in worker_blacks.values())
                 n_w = sum(len(v) for v in worker_whites.values())
                 n_c = sum(len(v) for v in worker_cuts.values())
@@ -299,14 +304,17 @@ def scan_keyframes(
                 "-y",
                 "-v",
                 "error",
+                "-nostats",
+                "-progress",
+                "pipe:1",
                 "-ss",
                 f"{spec.t_start:.2f}",
+                "-t",
+                f"{chunk_dur:.2f}",
                 "-skip_frame",
                 "nokey",
                 "-i",
                 str(video_path),
-                "-t",
-                f"{chunk_dur:.2f}",
                 "-vf",
                 f"fps=1/{interval},scale=240:135:flags=fast_bilinear,tile={cols}x{spec.n_rows}",
                 "-frames:v",
@@ -317,11 +325,32 @@ def scan_keyframes(
                 "4",
                 str(spec.strip_path),
             ]
-            subprocess.run(cmd, stdin=subprocess.DEVNULL, check=False)
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+            )
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                if line.startswith("out_time_us="):
+                    raw_us = safe_float(line.split("=", 1)[1].strip())
+                    if raw_us is not None and raw_us >= 0:
+                        prog = min(chunk_dur, raw_us / 1_000_000.0)
+                        with lock:
+                            worker_prog[spec.worker_id] = max(worker_prog[spec.worker_id], prog)
+                            tot_prog = min(duration * 0.99, sum(worker_prog.values()))
+                        if on_sprite is not None:
+                            on_sprite(tot_prog)
+            proc.wait()
             with lock:
                 worker_prog[spec.worker_id] = chunk_dur
-                if on_sprite is not None:
-                    on_sprite(min(duration, sum(worker_prog.values())))
+                tot_prog = min(duration * 0.99, sum(worker_prog.values()))
+            if on_sprite is not None:
+                on_sprite(tot_prog)
 
         with ThreadPoolExecutor(max_workers=len(chunks)) as pool:
             list(pool.map(run_sprite_only_chunk, chunks))
@@ -334,6 +363,8 @@ def scan_keyframes(
         if len(valid_strips) == 1:
             valid_strips[0].replace(sprite_abs)
         elif len(valid_strips) > 1:
+            if on_sprite is not None:
+                on_sprite(duration * 0.95)
             inputs: list[str] = []
             for sp in valid_strips:
                 inputs.extend(["-i", str(sp)])
@@ -376,6 +407,6 @@ def scan_keyframes(
             2,
             duration,
             duration,
-            f"{len(raw_res.black_points)} black · {len(raw_res.white_points)} white · {len(raw_res.visual_cuts)} visual",
+            f"{len(raw_res.black_points)} black · {len(raw_res.white_points)} white · {len(raw_res.visual_cuts)} visual cuts",
         )
     return raw_res, sprite_meta

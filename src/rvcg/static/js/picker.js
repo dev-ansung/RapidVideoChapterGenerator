@@ -40,7 +40,10 @@ export function setPhaseUI(id, pct, info) {
   const pctEl = document.getElementById(`p-pct-${id}`);
   const infoEl = document.getElementById(`p-info-${id}`);
   if (fill) fill.value = Math.max(0, Math.min(100, pct));
-  if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
+  if (pctEl) {
+    const displayPct = pct >= 100 ? 100 : Math.min(99, Math.floor(pct));
+    pctEl.textContent = `${displayPct}%`;
+  }
   if (infoEl && info !== undefined) {
     infoEl.textContent = info;
     infoEl.dataset.tippyContent = info;
@@ -163,8 +166,8 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
         if (m) {
           const totFades = Number(m[1]) + Number(m[2]);
           if (payload.enable_black_fades && dom.statBlack) dom.statBlack.textContent = `${totFades} raw`;
-          if (payload.enable_visual_cuts && dom.statVisual) dom.statVisual.textContent = `${m[3]} raw`;
-          if (dom.progressSummary) dom.progressSummary.textContent = `${Math.round(pct)}% · ${m[1]} black · ${m[2]} white · ${m[3]} visual`;
+          const displayPct = pct >= 100 ? 100 : Math.min(99, Math.floor(pct));
+          if (dom.progressSummary) dom.progressSummary.textContent = `${displayPct}% · ${m[1]} black · ${m[2]} white · ${m[3]} visual`;
         }
       }
       if (msg.phase !== 2 && msg.info && lastPhaseInfo[msg.phase] !== msg.info) {
