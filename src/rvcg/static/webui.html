@@ -703,7 +703,8 @@
       <span id="now-range" class="popover-range"></span>
     </div>
     <div class="toolbar-right">
-      <button id="split-here-btn" class="primary" type="button">✂ Split Here</button>
+      <button id="split-here-btn" class="primary" type="button">✂ Split Scene</button>
+      <button id="export-scene-btn" type="button">⬇ Export Scene</button>
       <button id="close-player-btn" type="button">✕</button>
     </div>
   </div>
@@ -1325,6 +1326,40 @@ document.getElementById("split-here-btn").addEventListener("click", () => {
     title: `Scene ${String(idx + 2).padStart(2, "0")}`,
   });
   syncChaptersEdit(next);
+});
+
+document.getElementById("export-scene-btn").addEventListener("click", async () => {
+  if (!currentVideoPath || !CUTS.length) return;
+  let idx = currentIndex;
+  if (idx < 0 || idx >= CUTS.length) {
+    const t = player.currentTime();
+    idx = CUTS.findIndex((c) => t >= c.start_time && t < c.end_time);
+  }
+  if (idx < 0 || idx >= CUTS.length) idx = 0;
+  const item = CUTS[idx];
+  const btn = document.getElementById("export-scene-btn");
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Exporting...";
+  setStatus(`Exporting #${item.id}...`, false);
+  try {
+    const res = await fetch("/api/chapters/export-scene", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: currentVideoPath, scene: item }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setStatus(`✓ Exported: ${data.filename}`, false);
+    } else {
+      setStatus(`Export failed: ${data.error || "error"}`, true);
+    }
+  } catch (err) {
+    setStatus("Export failed", true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
 });
 
 document.getElementById("export-menu-btn").addEventListener("click", (e) => {
