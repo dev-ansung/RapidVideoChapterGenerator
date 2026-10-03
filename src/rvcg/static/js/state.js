@@ -1,6 +1,6 @@
 export const state = {
-  currentDir: window.__RVCG_BOOT__?.initDir || "",
-  currentVideoPath: window.__RVCG_BOOT__?.initVid || "",
+  currentDir: "",
+  currentVideoPath: "",
   videoSrc: "",
   sprite: { url: "", interval: 10, cols: 10, rows: 1, total_frames: 1 },
   cuts: [],
@@ -14,6 +14,13 @@ export const state = {
   manualPlayheadRef: 0,
   manualPathTouched: false,
 };
+
+export function initStateFromBoot() {
+  if (window.__RVCG_BOOT__) {
+    if (window.__RVCG_BOOT__.initDir) state.currentDir = window.__RVCG_BOOT__.initDir;
+    if (window.__RVCG_BOOT__.initVid) state.currentVideoPath = window.__RVCG_BOOT__.initVid;
+  }
+}
 
 export const dom = {
   get pickerView() { return document.getElementById("picker-view"); },

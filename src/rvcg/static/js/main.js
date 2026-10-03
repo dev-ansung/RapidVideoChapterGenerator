@@ -1,12 +1,13 @@
-import { state } from "./state.js";
+import { state, initStateFromBoot } from "./state.js";
 import { initStatusRevealBtn } from "./api.js";
-import { initPlayer, highlightActiveCard } from "./player.js";
-import { renderGallery, initGalleryControls } from "./gallery.js";
+import { initPlayer } from "./player.js";
+import { renderGallery, initGalleryControls, highlightActiveCard } from "./gallery.js";
 import { initPicker, loadDirectory, startScan } from "./picker.js";
 import { initTrimModal } from "./trim-modal.js";
 import { initSettingsAndExport } from "./settings.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+function bootstrapApp() {
+  initStateFromBoot();
   initStatusRevealBtn();
   initPlayer(
     () => highlightActiveCard(),
@@ -22,4 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
       startScan(state.currentVideoPath, false);
     }
   });
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrapApp);
+} else {
+  bootstrapApp();
+}
