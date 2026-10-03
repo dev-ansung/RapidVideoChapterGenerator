@@ -15,9 +15,9 @@
 
 * **Multi-Core Keyframe Acceleration:** Partitions video timelines across parallel workers using I-frame-only decoding (`-skip_frame nokey`) and $240\times 135$ downscaled luminance/scene analysis to scan multi-hour videos in seconds.
 * **5-Stage Hybrid Boundary Solver:** Combines fade-to-black detection (`blackdetect`) with perceptual visual cut scoring (`select='gt(scene,...)'`), priority anchor placement, smart long-segment subdivision, and micro-tail merging.
+* **Web Lifecycle Studio (`rapid-chapters`):** Built-in local web app with a full-width file browser, live 5-phase SSE scan progress, 9-cell `3×3` Grid and `144:9` List scene views, a movable/resizable floating video player (`interact.js`) with subtitle auto-loading, interactive chapter editing (rename, split at playhead, delete/merge), and optional 1-click chapter muxing.
 * **Lossless Atomic Injection:** Operates exclusively at the container level (`-c copy -movflags +faststart`). Video bitstreams, audio tracks, HDR/Dolby Vision metadata, and embedded subtitles remain untouched, with safe atomic in-place replacement.
-* **Native Player Support:** Writes standard container chapter atoms (`chpl` / `FFMETADATA1`) recognized natively by QuickTime Player, IINA, VLC, mpv, Apple TV, Plex, and Jellyfin.
-* **Multi-Format Export & 3×3 Web Browser:** Supports direct container muxing, plain-text export (`youtube`, `json`, `csv`, `ffmetadata`), and an optional zero-server **3×3 interactive HTML5 scene browser** (`--browse`) with live cell hover previews.
+* **Native Player & Unicode Support:** Writes standard container chapter atoms (`chpl` / `FFMETADATA1`) with full NFC/NFD Unicode filename and chapter title support across macOS, Linux, and Windows.
 
 ---
 
@@ -54,6 +54,10 @@ winget install Gyan.FFmpeg
 ### Run Instantly with `uvx` (Zero Install)
 
 ```bash
+# Launch Web Lifecycle Studio
+uvx --from git+https://github.com/dev-ansung/RapidVideoChapterGenerator.git rapid-chapters
+
+# Or process a video directly from the CLI
 uvx --from git+https://github.com/dev-ansung/RapidVideoChapterGenerator.git rapid-chapters input.mp4
 ```
 
@@ -73,7 +77,20 @@ uv pip install -e .
 
 ## Quick Start
 
-### 1. Detect Scenes and Embed Chapters In-Place (Default)
+### 1. Web Lifecycle Studio (No-Argument Frontend)
+
+Run without arguments (or pass `--ui`) to launch the interactive **Web Lifecycle Studio** in your browser:
+
+```bash
+rapid-chapters
+```
+
+* **Select & Scan:** Browse local directories or paste a video path to run the parallel keyframe scan with live progress bars.
+* **Browse & Preview:** Inspect every chapter via a 9-cell `3×3` contact grid (or `144:9` widescreen filmstrip in List mode) with live cell hover video previews.
+* **Floating Movable/Resizable Player:** Click any scene thumbnail to open the floating video player (`interact.js` draggable and 8-edge resizable) with automatic `.srt`/embedded subtitle rendering and seekbar sprite-sheet scrubbing.
+* **Edit, Export, or Embed:** Rename chapters inline, split chapters at the current playhead (`✂ Split Here`), delete/merge scenes, export timestamps (`Export ▾`), or click **`Embed Chapters`** to mux chapters losslessly (`-c copy`) into the video.
+
+### 2. Detect Scenes and Embed Chapters via CLI
 
 Atomically inject native chapter markers directly into the input video without creating duplicate files:
 
@@ -85,14 +102,6 @@ Or write to a separate output container:
 
 ```bash
 rapid-chapters input.mp4 -o output.mp4
-```
-
-### 2. Web Lifecycle Studio (No-Argument Frontend)
-
-Run without arguments (or pass `--ui`) to launch the **Web Lifecycle Studio** in your browser—handling directory/file selection, live 5-phase SSE progress, 3×3 contact-sheet browsing, interactive chapter editing (rename, split at playhead, delete/merge), and lossless `-c copy` saving:
-
-```bash
-rapid-chapters
 ```
 
 ### 3. Export YouTube Description Timestamps
@@ -112,9 +121,9 @@ Output:
 00:19:04 - Scene 04
 ```
 
-### 4. Launch the 3×3 Interactive Scene Browser
+### 4. Generate a Standalone 3×3 HTML5 Scene Browser
 
-Embed chapters and open a zero-server HTML5 3×3 contact-sheet gallery with live cell hover previews and seekbar thumbnail scrubbing:
+Embed chapters and open a static, zero-server HTML5 3×3 contact-sheet gallery:
 
 ```bash
 rapid-chapters input.mp4 --browse
@@ -166,23 +175,28 @@ rapid-chapters lecture.mp4 --preset presentation -o lecture_chaptered.mp4
 Usage: rapid-chapters [OPTIONS] [INPUT_VIDEO]
 
 Arguments:
-  [INPUT_VIDEO]                   Path to target video file (omit for interactive prompt loop)
+  [INPUT_VIDEO]                   Path to target video file (omit to launch Web Lifecycle Studio)
 
 Detection Controls:
   -t, --threshold FLOAT           Visual cut sensitivity (0.0 to 1.0) [default: 0.38]
-  -m, --min-scene-len SECONDS     Minimum duration between chapters [default: 180]
-  -M, --max-scene-len SECONDS     Maximum duration before smart subdivision [default: 600]
-  --target-scene-len SECONDS      Target duration when subdividing long gaps [default: 360]
+  -m, --min-scene-len DURATION    Minimum duration between chapters (e.g. 180, 3m) [default: 180]
+  -M, --max-scene-len DURATION    Maximum duration before smart subdivision (e.g. 600, 10m) [default: 600]
+  --target-scene-len DURATION     Target duration when subdividing long gaps (e.g. 360, 6m) [default: 360]
   --preset [default|podcast|presentation|action]
                                   Predefined detection sensitivity profile
   -w, --workers INT               Parallel FFmpeg keyframe worker count [default: 8]
 
-Output Options:
+Output & UI Options:
   -o, --output PATH               Destination file path (defaults to atomic in-place update)
+  -i, --in-place                  Inject chapter markers directly into input file (default for mp4 mode)
   -f, --format [mp4|youtube|ffmetadata|json|csv]
                                   Output mode [default: mp4]
   --title-template TEXT           Chapter naming template [default: "Scene {n:02d}"]
-  --browse                        Launch interactive 3x3 HTML5 scene browser after processing
+  --ui                            Launch Web Lifecycle Studio server
+  --browse                        Launch standalone 3x3 HTML5 scene browser after CLI processing
+  --cli-prompt                    Use interactive terminal prompt when no video is given
+  --port INT                      Port for Web Lifecycle Studio [default: auto]
+  --no-open                       Do not open browser window automatically
   --refresh                       Force re-scan even if embedded chapters or cached browser exist
 ```
 
