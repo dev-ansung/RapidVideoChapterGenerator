@@ -224,9 +224,13 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             if resolved is None:
                 self._send_json(200, json.dumps({"ok": False, "kind": "missing"}, ensure_ascii=False))
             else:
+                parent_dir = str(resolved.parent if kind == "file" else resolved)
                 self._send_json(
                     200,
-                    json.dumps({"ok": True, "path": str(resolved), "kind": kind}, ensure_ascii=False),
+                    json.dumps(
+                        {"ok": True, "path": str(resolved), "kind": kind, "parent_dir": parent_dir},
+                        ensure_ascii=False,
+                    ),
                 )
             return
 

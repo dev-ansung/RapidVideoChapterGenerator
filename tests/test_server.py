@@ -85,6 +85,7 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
         resolved = _post_json(f"{base_url}/api/resolve-path", {"path": escaped})
         assert resolved.get("ok") is True
         assert resolved.get("path") == str(vid.resolve())
+        assert resolved.get("parent_dir") == str(vid.resolve().parent)
 
         req_range = urllib.request.Request(
             f"{base_url}/api/media?path={urllib.parse.quote(str(vid))}",
