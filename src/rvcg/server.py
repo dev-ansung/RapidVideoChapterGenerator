@@ -6,6 +6,7 @@ import re
 import shlex
 import tempfile
 import threading
+import unicodedata
 import urllib.parse
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -15,7 +16,7 @@ from pathlib import Path
 
 from rvcg.models import BoundaryConfig, SceneSegment, SpriteMeta
 from rvcg.muxer import embed_chapters_atomic, format_chapters_export
-from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters
+from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters, safe_float
 from rvcg.scanner import scan_keyframes
 from rvcg.solver import compute_cell_times, segments_from_tuples, solve_boundaries
 from rvcg.webui import render_webui_html
@@ -30,29 +31,47 @@ class ScanJob:
     events: queue.Queue[str | None] = field(default_factory=queue.Queue)
 
 
+def match_unicode_path(candidate: Path) -> Path | None:
+    if candidate.exists():
+        return candidate.resolve()
+    for form in ("NFC", "NFD"):
+        norm_p = Path(unicodedata.normalize(form, str(candidate)))
+        if norm_p.exists():
+            return norm_p.resolve()
+    parent = candidate.parent
+    if parent.is_dir():
+        target_nfc = unicodedata.normalize("NFC", candidate.name)
+        for child in parent.iterdir():
+            if unicodedata.normalize("NFC", child.name) == target_nfc:
+                return child.resolve()
+    return None
+
+
 def resolve_any_path(raw: str) -> tuple[Path | None, str]:
     s = raw.strip()
     if not s:
         return None, "missing"
+    direct = match_unicode_path(Path(s).expanduser())
+    if direct is not None:
+        return direct, ("file" if direct.is_file() else "dir")
     try:
         parts = shlex.split(s)
         cleaned = parts[0] if parts else s
     except ValueError:
         cleaned = re.sub(r"\\(.)", r"\1", s.strip("'\""))
-    p = Path(cleaned).expanduser().resolve()
-    if p.is_file():
-        return p, "file"
-    if p.is_dir():
-        return p, "dir"
+    resolved = match_unicode_path(Path(cleaned).expanduser())
+    if resolved is not None:
+        return resolved, ("file" if resolved.is_file() else "dir")
     return None, "missing"
 
 
 def parse_chapters_payload(raw_list: list[dict[str, str | int | float]], card_dur: float = 8.4) -> list[SceneSegment]:
     segments: list[SceneSegment] = []
     for idx, item in enumerate(raw_list, 1):
-        s = float(item.get("start_time", 0.0))
-        e = float(item.get("end_time", s + 1.0))
-        title = str(item.get("title", f"Scene {idx:02d}")).strip() or f"Scene {idx:02d}"
+        s = safe_float(item.get("start_time")) or 0.0
+        e = safe_float(item.get("end_time")) or (s + 1.0)
+        raw_title = str(item.get("title", f"Scene {idx:02d}")).strip()
+        title = unicodedata.normalize("NFC", raw_title) if raw_title else f"Scene {idx:02d}"
         segments.append(
             SceneSegment(
                 index=idx,
@@ -102,7 +121,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", "0"))
         if length <= 0:
             return "{}"
-        return self.rfile.read(length).decode("utf-8")
+        return self.rfile.read(length).decode("utf-8", errors="replace")
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
@@ -121,16 +140,15 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             return
 
         if route == "/api/fs":
-            raw_dir = qs.get("dir", [str(self.server.default_dir)])[0]
-            target_dir = Path(raw_dir).expanduser().resolve()
+            raw_dir = urllib.parse.unquote(qs.get("dir", [str(self.server.default_dir)])[0])
+            matched_dir = match_unicode_path(Path(raw_dir).expanduser())
+            target_dir = matched_dir if (matched_dir is not None and matched_dir.is_dir()) else self.server.default_dir
             if qs.get("parent", ["0"])[0] == "1":
                 target_dir = target_dir.parent
-            if not target_dir.is_dir():
-                target_dir = self.server.default_dir
 
             dirs = sorted(
                 (
-                    {"name": p.name, "path": str(p.resolve())}
+                    {"name": unicodedata.normalize("NFC", p.name), "path": str(p.resolve())}
                     for p in target_dir.iterdir()
                     if p.is_dir() and not p.name.startswith(".")
                 ),
@@ -143,19 +161,25 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             )
             vid_items = [
                 {
-                    "name": v.name,
+                    "name": unicodedata.normalize("NFC", v.name),
                     "path": str(v.resolve()),
                     "size_mb": round(v.stat().st_size / (1024 * 1024), 1),
                 }
                 for v in videos
             ]
-            self._send_json(200, json.dumps({"ok": True, "dir": str(target_dir), "dirs": dirs, "videos": vid_items}))
+            self._send_json(
+                200,
+                json.dumps(
+                    {"ok": True, "dir": str(target_dir), "dirs": dirs, "videos": vid_items},
+                    ensure_ascii=False,
+                ),
+            )
             return
 
         if route == "/api/media":
-            raw_path = qs.get("path", [""])[0]
-            file_path = Path(raw_path).expanduser().resolve()
-            if not file_path.is_file():
+            raw_path = urllib.parse.unquote(qs.get("path", [""])[0])
+            file_path = match_unicode_path(Path(raw_path).expanduser())
+            if file_path is None or not file_path.is_file():
                 self.send_error(404, "File not found")
                 return
             self._serve_file_range(file_path)
@@ -170,7 +194,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 return
 
             self.send_response(200)
-            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "keep-alive")
             self.end_headers()
@@ -182,7 +206,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 try:
                     self.wfile.write(f"data: {msg}\n\n".encode("utf-8"))
                     self.wfile.flush()
-                except BrokenPipeError:
+                except (BrokenPipeError, ConnectionResetError):
                     break
             return
 
@@ -198,26 +222,32 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             raw_p = str(payload.get("path", ""))
             resolved, kind = resolve_any_path(raw_p)
             if resolved is None:
-                self._send_json(200, json.dumps({"ok": False, "kind": "missing"}))
+                self._send_json(200, json.dumps({"ok": False, "kind": "missing"}, ensure_ascii=False))
             else:
-                self._send_json(200, json.dumps({"ok": True, "path": str(resolved), "kind": kind}))
+                self._send_json(
+                    200,
+                    json.dumps({"ok": True, "path": str(resolved), "kind": kind}, ensure_ascii=False),
+                )
             return
 
         if route == "/api/chapters/recalc":
             raw_ch = payload.get("chapters", [])
             segments = parse_chapters_payload(raw_ch, self.server.default_config.card_dur)
-            self._send_json(200, json.dumps({"ok": True, "chapters": [s.to_dict() for s in segments]}))
+            self._send_json(
+                200,
+                json.dumps({"ok": True, "chapters": [s.to_dict() for s in segments]}, ensure_ascii=False),
+            )
             return
 
         if route == "/api/chapters/save":
-            vid_path = Path(str(payload.get("path", ""))).expanduser().resolve()
+            vid_path, kind = resolve_any_path(str(payload.get("path", "")))
             raw_ch = payload.get("chapters", [])
-            if not vid_path.is_file():
-                self._send_json(400, json.dumps({"ok": False, "error": "Video file not found"}))
+            if vid_path is None or kind != "file":
+                self._send_json(400, json.dumps({"ok": False, "error": "Video file not found"}, ensure_ascii=False))
                 return
             segments = parse_chapters_payload(raw_ch, self.server.default_config.card_dur)
             dest = embed_chapters_atomic(vid_path, segments, output_path=None)
-            self._send_json(200, json.dumps({"ok": True, "path": str(dest)}))
+            self._send_json(200, json.dumps({"ok": True, "path": str(dest)}, ensure_ascii=False))
             return
 
         if route == "/api/chapters/export":
@@ -225,21 +255,21 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             raw_ch = payload.get("chapters", [])
             segments = parse_chapters_payload(raw_ch, self.server.default_config.card_dur)
             content = format_chapters_export(segments, fmt)
-            self._send_json(200, json.dumps({"ok": True, "content": content}))
+            self._send_json(200, json.dumps({"ok": True, "content": content}, ensure_ascii=False))
             return
 
         if route == "/api/scan":
-            vid_path = Path(str(payload.get("path", ""))).expanduser().resolve()
-            if not vid_path.is_file():
-                self._send_json(400, json.dumps({"ok": False, "error": "Video file not found"}))
+            vid_path, kind = resolve_any_path(str(payload.get("path", "")))
+            if vid_path is None or kind != "file":
+                self._send_json(400, json.dumps({"ok": False, "error": "Video file not found"}, ensure_ascii=False))
                 return
             refresh = bool(payload.get("refresh", False))
             cfg = BoundaryConfig(
-                min_seg=float(payload.get("min_seg", self.server.default_config.min_seg)),
-                max_seg=float(payload.get("max_seg", self.server.default_config.max_seg)),
-                target_seg=float(payload.get("target_seg", self.server.default_config.target_seg)),
-                workers=max(1, int(payload.get("workers", self.server.default_config.workers))),
-                scene_threshold=float(payload.get("threshold", self.server.default_config.scene_threshold)),
+                min_seg=safe_float(payload.get("min_seg")) or self.server.default_config.min_seg,
+                max_seg=safe_float(payload.get("max_seg")) or self.server.default_config.max_seg,
+                target_seg=safe_float(payload.get("target_seg")) or self.server.default_config.target_seg,
+                workers=max(1, int(safe_float(payload.get("workers")) or self.server.default_config.workers)),
+                scene_threshold=safe_float(payload.get("threshold")) or self.server.default_config.scene_threshold,
             )
             job_id = uuid.uuid4().hex[:12]
             job = ScanJob(job_id=job_id, video_path=vid_path)
@@ -247,7 +277,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 self.server.jobs[job_id] = job
             t = threading.Thread(target=self._run_scan_job, args=(job, cfg, refresh), daemon=True)
             t.start()
-            self._send_json(200, json.dumps({"ok": True, "job_id": job_id}))
+            self._send_json(200, json.dumps({"ok": True, "job_id": job_id}, ensure_ascii=False))
             return
 
         self.send_error(404, "Not found")
@@ -260,8 +290,8 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             video_path = job.video_path
             duration = probe_duration(video_path)
             stat = video_path.stat()
-            digest = hashlib.sha1(f"{video_path}:{stat.st_size}".encode()).hexdigest()[:10]
-            browser_dir = Path(tempfile.gettempdir()) / f"browse_video_{video_path.stem}_{digest}"
+            digest = hashlib.sha1(f"{video_path}:{stat.st_size}".encode("utf-8")).hexdigest()[:12]
+            browser_dir = Path(tempfile.gettempdir()) / f"rvcg_browser_{digest}"
             browser_dir.mkdir(parents=True, exist_ok=True)
 
             def on_phase(phase: int, completed: float, total: float, info: str) -> None:
@@ -273,7 +303,8 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                             "completed": completed,
                             "total": total,
                             "info": info,
-                        }
+                        },
+                        ensure_ascii=False,
                     )
                 )
 
@@ -285,7 +316,8 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                             "completed": completed,
                             "total": duration,
                             "info": "rendering sprite sheet...",
-                        }
+                        },
+                        ensure_ascii=False,
                     )
                 )
 
@@ -328,7 +360,7 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             assert sprite_meta is not None
             sprite_abs = browser_dir / sprite_meta.url
             sprite_payload = SpriteMeta(
-                url=f"/api/media?path={urllib.parse.quote(str(sprite_abs))}",
+                url=f"/api/media?path={urllib.parse.quote(str(sprite_abs), safe='')}",
                 interval=sprite_meta.interval,
                 cols=sprite_meta.cols,
                 rows=sprite_meta.rows,
@@ -339,15 +371,16 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                     {
                         "type": "complete",
                         "video_path": str(video_path),
-                        "video_name": video_path.name,
+                        "video_name": unicodedata.normalize("NFC", video_path.name),
                         "sprite": sprite_payload.to_dict(),
                         "chapters": [s.to_dict() for s in segments],
                         "subtitles": [t.to_dict() for t in sub_tracks],
-                    }
+                    },
+                    ensure_ascii=False,
                 )
             )
         except Exception as exc:
-            push_event(json.dumps({"type": "error", "error": str(exc)}))
+            push_event(json.dumps({"type": "error", "error": str(exc)}, ensure_ascii=False))
         finally:
             job.events.put(None)
 
