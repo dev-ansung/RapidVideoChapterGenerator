@@ -80,8 +80,8 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert "interact.min.js" in html
             assert "tippy-bundle.umd.min.js" in html
             assert ">Embed Chapters<" in html
-            assert "Split Scene" in html
-            assert "Export Scene" in html
+            assert 'id="split-here-btn"' in html
+            assert 'id="export-scene-btn"' in html
             assert 'id="cfg-enable-black"' in html
             assert 'id="cfg-black-dur"' in html
             assert 'id="cfg-enable-visual"' in html
@@ -93,14 +93,11 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert 'id="settings-popover"' in html
             assert 'id="pref-show-cut-dot"' in html
             assert "cut-dot" in html
-            assert 'id="split-modal-popover"' in html
-            assert 'id="split-prev-hero"' in html
-            assert 'id="split-center-hero"' in html
-            assert 'id="split-next-hero"' in html
-            assert 'id="split-prev-cut-btn"' in html
-            assert 'id="split-next-cut-btn"' in html
-            assert 'id="split-ribbon-cands"' in html
-            assert 'id="split-prop-bar"' in html
+            assert 'id="prev-cut-btn"' in html
+            assert 'id="next-cut-btn"' in html
+            assert 'id="split-here-btn"' in html
+            assert 'id="export-scene-btn"' in html
+            assert 'id="player-hud-toast"' in html
             assert 'id="reveal-file-btn"' in html
             assert "ph-folder-open" in html
             assert 'value="black-fades"' in html
@@ -112,7 +109,6 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             "player.js",
             "gallery.js",
             "picker.js",
-            "split-modal.js",
             "settings.js",
         ):
             with urllib.request.urlopen(f"{base_url}/static/js/{mod_name}", timeout=5) as js_resp:
@@ -230,6 +226,19 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
         reveal_res = _post_json(f"{base_url}/api/fs/reveal", {"path": str(out_scene_path)})
         assert reveal_res.get("ok") is True
         assert revealed_paths == [out_scene_path]
+
+        trans_res = _post_json(
+            f"{base_url}/api/transitions/find-nearest",
+            {
+                "path": str(vid),
+                "time": 0.0,
+                "direction": "next",
+                "threshold": 0.20,
+                "black_min_dur": 0.20,
+            },
+        )
+        assert trans_res.get("ok") is True
+        assert "found" in trans_res
 
         scan_start = _post_json(
             f"{base_url}/api/scan",

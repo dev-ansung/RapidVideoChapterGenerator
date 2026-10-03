@@ -47,3 +47,49 @@ def test_parse_ffmpeg_line_events() -> None:
         cur_local_t=45.5,
     )
     assert ev_out.progress_sec == 120.0
+
+
+def test_find_precision_transition(tmp_path: Path) -> None:
+    import subprocess
+
+    from rvcg.scanner import find_precision_transition
+
+    vid = tmp_path / "scene_change.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=320x180:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:s=320x180:d=2",
+            "-filter_complex",
+            "[0:v][1:v]concat=n=2:v=1:a=0[out]",
+            "-map",
+            "[out]",
+            "-c:v",
+            "libx264",
+            "-g",
+            "10",
+            str(vid),
+        ],
+        stdin=subprocess.DEVNULL,
+        check=True,
+    )
+
+    # Next cut from t=0.5s should find the scene change around 2.0s
+    res_next = find_precision_transition(vid, current_time=0.5, direction="next", threshold=0.20)
+    assert res_next is not None
+    assert 1.8 <= res_next.timestamp <= 2.2
+
+    # Prev cut from t=3.0s should find the scene change around 2.0s
+    res_prev = find_precision_transition(vid, current_time=3.0, direction="prev", threshold=0.20)
+    assert res_prev is not None
+    assert 1.8 <= res_prev.timestamp <= 2.2

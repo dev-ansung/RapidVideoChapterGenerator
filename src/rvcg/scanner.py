@@ -343,3 +343,123 @@ def scan_keyframes(
             f"{len(raw_res.black_points)} black fades · {len(raw_res.visual_cuts)} visual cuts",
         )
     return raw_res, sprite_meta
+
+
+@dataclass(frozen=True)
+class PrecisionTransition:
+    timestamp: float
+    kind: str
+    score: float
+    label: str
+
+    def to_dict(self) -> dict[str, str | float]:
+        return {
+            "timestamp": self.timestamp,
+            "kind": self.kind,
+            "score": self.score,
+            "label": self.label,
+        }
+
+
+def _scan_slice_transitions(
+    video_path: Path,
+    t_start: float,
+    slice_dur: float,
+    threshold: float,
+    black_min_dur: float,
+) -> list[PrecisionTransition]:
+    if slice_dur <= 0.05:
+        return []
+    cmd = [
+        "ffmpeg",
+        "-nostdin",
+        "-v",
+        "info",
+        "-ss",
+        f"{t_start:.3f}",
+        "-t",
+        f"{slice_dur:.3f}",
+        "-i",
+        str(video_path),
+        "-vf",
+        f"scale=320:180:flags=fast_bilinear,select=gt(scene\\,{threshold:.3f}),showinfo,blackdetect=d={black_min_dur:.2f}:pic_th=0.98:pix_th=0.10",
+        "-f",
+        "null",
+        "-",
+    ]
+    proc = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=False)
+    results: list[PrecisionTransition] = []
+    lines = proc.stderr.splitlines()
+
+    for line in lines:
+        for m_b in re.finditer(r"black_start:([0-9.]+)\s+black_end:([0-9.]+)", line):
+            bs = safe_float(m_b.group(1))
+            be = safe_float(m_b.group(2))
+            if bs is not None and be is not None:
+                ts = round(t_start + (bs + be) / 2.0, 3)
+                results.append(PrecisionTransition(timestamp=ts, kind="black", score=2.0, label="Black Fade"))
+
+        m_pts = re.search(r"pts_time:([0-9.]+)", line)
+        if m_pts:
+            pts = safe_float(m_pts.group(1))
+            if pts is not None:
+                ts = round(t_start + pts, 3)
+                m_sc = re.search(r"lavfi\.scene_score=([0-9.]+)", line)
+                sc = safe_float(m_sc.group(1)) if m_sc else 0.50
+                score_val = sc if sc is not None else 0.50
+                results.append(
+                    PrecisionTransition(
+                        timestamp=ts,
+                        kind="visual",
+                        score=round(score_val, 3),
+                        label=f"Visual {score_val:.2f}",
+                    )
+                )
+
+    # Deduplicate within 0.08s
+    deduped: list[PrecisionTransition] = []
+    results.sort(key=lambda x: x.timestamp)
+    for r in results:
+        if not any(abs(r.timestamp - ex.timestamp) < 0.08 for ex in deduped):
+            deduped.append(r)
+    return deduped
+
+
+def find_precision_transition(
+    video_path: Path,
+    current_time: float,
+    direction: str,
+    window_sec: float = 30.0,
+    threshold: float = 0.20,
+    black_min_dur: float = 0.20,
+) -> PrecisionTransition | None:
+    norm_dir = direction.strip().lower()
+    if norm_dir == "prev":
+        t_start = max(0.0, current_time - window_sec)
+        slice_dur = current_time - t_start
+        cuts = _scan_slice_transitions(video_path, t_start, slice_dur, threshold, black_min_dur)
+        matches = [c for c in cuts if c.timestamp < current_time - 0.05]
+        if matches:
+            return matches[-1]
+        # Expand window if not found
+        if t_start > 0:
+            exp_start = max(0.0, current_time - (window_sec * 3.0))
+            exp_dur = t_start - exp_start
+            exp_cuts = _scan_slice_transitions(video_path, exp_start, exp_dur, threshold, black_min_dur)
+            exp_matches = [c for c in exp_cuts if c.timestamp < current_time - 0.05]
+            if exp_matches:
+                return exp_matches[-1]
+    else:
+        t_start = current_time
+        slice_dur = window_sec
+        cuts = _scan_slice_transitions(video_path, t_start, slice_dur, threshold, black_min_dur)
+        matches = [c for c in cuts if c.timestamp > current_time + 0.05]
+        if matches:
+            return matches[0]
+        # Expand window if not found
+        exp_start = current_time + window_sec
+        exp_cuts = _scan_slice_transitions(video_path, exp_start, window_sec * 2.0, threshold, black_min_dur)
+        exp_matches = [c for c in exp_cuts if c.timestamp > current_time + 0.05]
+        if exp_matches:
+            return exp_matches[0]
+    return None
