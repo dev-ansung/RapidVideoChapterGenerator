@@ -162,42 +162,88 @@ def scan_keyframes(
 
     if not skip_boundary_scan:
 
-        def run_boundary_chunk(spec: ChunkSpec) -> None:
+        def run_chunk(spec: ChunkSpec) -> None:
             chunk_dur = max(0.1, spec.t_end - spec.t_start)
             th = config.scene_threshold
             bd = max(0.05, config.black_min_dur)
-            fc = (
-                f"[0:v]scale=240:135:flags=fast_bilinear,split=2[vd_blk][vd_wht];"
-                f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gte(scene,0)',metadata=print:file=-[vnull1];"
-                f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:key=lavfi.black_start:file=-[vnull2]"
-            )
-            cmd = [
-                "ffmpeg",
-                "-nostdin",
-                "-y",
-                "-hide_banner",
-                "-nostats",
-                "-ss",
-                f"{spec.t_start:.2f}",
-                "-t",
-                f"{chunk_dur:.2f}",
-                "-skip_frame",
-                "nokey",
-                "-i",
-                str(video_path),
-                "-filter_complex",
-                fc,
-                "-map",
-                "[vnull1]",
-                "-f",
-                "null",
-                "-",
-                "-map",
-                "[vnull2]",
-                "-f",
-                "null",
-                "-",
-            ]
+            with_sprite = build_sprite and spec.strip_path is not None
+            if with_sprite and spec.strip_path is not None:
+                fc = (
+                    f"[0:v]scale=240:135:flags=fast_bilinear,split=3[vd_blk][vd_wht][vs];"
+                    f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gte(scene,0)',metadata=print:file=-[vnull1];"
+                    f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:key=lavfi.black_start:file=-[vnull2];"
+                    f"[vs]fps=1/{interval},tile={cols}x{spec.n_rows}[vspr]"
+                )
+                cmd = [
+                    "ffmpeg",
+                    "-nostdin",
+                    "-y",
+                    "-hide_banner",
+                    "-nostats",
+                    "-ss",
+                    f"{spec.t_start:.2f}",
+                    "-skip_frame",
+                    "nokey",
+                    "-i",
+                    str(video_path),
+                    "-t",
+                    f"{chunk_dur:.2f}",
+                    "-filter_complex",
+                    fc,
+                    "-map",
+                    "[vnull1]",
+                    "-f",
+                    "null",
+                    "-",
+                    "-map",
+                    "[vnull2]",
+                    "-f",
+                    "null",
+                    "-",
+                    "-map",
+                    "[vspr]",
+                    "-frames:v",
+                    "1",
+                    "-update",
+                    "1",
+                    "-q:v",
+                    "4",
+                    str(spec.strip_path),
+                ]
+            else:
+                fc = (
+                    f"[0:v]scale=240:135:flags=fast_bilinear,split=2[vd_blk][vd_wht];"
+                    f"[vd_blk]blackdetect=d={bd}:pix_th=0.12:pic_th=0.82,select='gte(scene,0)',metadata=print:file=-[vnull1];"
+                    f"[vd_wht]negate,blackdetect=d={max(0.10, bd * 0.75):.2f}:pic_th=0.85:pix_th=0.25,metadata=print:key=lavfi.black_start:file=-[vnull2]"
+                )
+                cmd = [
+                    "ffmpeg",
+                    "-nostdin",
+                    "-y",
+                    "-hide_banner",
+                    "-nostats",
+                    "-ss",
+                    f"{spec.t_start:.2f}",
+                    "-skip_frame",
+                    "nokey",
+                    "-i",
+                    str(video_path),
+                    "-t",
+                    f"{chunk_dur:.2f}",
+                    "-filter_complex",
+                    fc,
+                    "-map",
+                    "[vnull1]",
+                    "-f",
+                    "null",
+                    "-",
+                    "-map",
+                    "[vnull2]",
+                    "-f",
+                    "null",
+                    "-",
+                ]
+
             proc = subprocess.Popen(
                 cmd,
                 stdin=subprocess.DEVNULL,
@@ -224,6 +270,8 @@ def scan_keyframes(
                         n_w = sum(len(v) for v in worker_whites.values())
                         n_c = sum(len(v) for v in worker_cuts.values())
                     emit(2, tot_prog, duration, f"{n_b} black · {n_w} white · {n_c} visual cuts")
+                    if with_sprite and on_sprite is not None:
+                        on_sprite(tot_prog)
 
             proc.wait()
             with lock:
@@ -233,18 +281,17 @@ def scan_keyframes(
                 n_w = sum(len(v) for v in worker_whites.values())
                 n_c = sum(len(v) for v in worker_cuts.values())
             emit(2, tot_prog, duration, f"{n_b} black · {n_w} white · {n_c} visual cuts")
+            if with_sprite and on_sprite is not None:
+                on_sprite(tot_prog)
 
         with ThreadPoolExecutor(max_workers=len(chunks)) as pool:
-            list(pool.map(run_boundary_chunk, chunks))
+            list(pool.map(run_chunk, chunks))
 
-    sprite_meta: SpriteMeta | None = None
-    if build_sprite and out_dir is not None:
-        sprite_prog = {c.worker_id: 0.0 for c in chunks}
-        sprite_lock = threading.Lock()
+    elif build_sprite and out_dir is not None:
 
-        def run_sprite_chunk(spec: ChunkSpec) -> Path | None:
+        def run_sprite_only_chunk(spec: ChunkSpec) -> None:
             if spec.strip_path is None:
-                return None
+                return
             chunk_dur = max(0.1, spec.t_end - spec.t_start)
             cmd = [
                 "ffmpeg",
@@ -271,18 +318,19 @@ def scan_keyframes(
                 str(spec.strip_path),
             ]
             subprocess.run(cmd, stdin=subprocess.DEVNULL, check=False)
-            with sprite_lock:
-                sprite_prog[spec.worker_id] = chunk_dur
+            with lock:
+                worker_prog[spec.worker_id] = chunk_dur
                 if on_sprite is not None:
-                    on_sprite(min(duration, sum(sprite_prog.values())))
-            return spec.strip_path
+                    on_sprite(min(duration, sum(worker_prog.values())))
 
         with ThreadPoolExecutor(max_workers=len(chunks)) as pool:
-            strip_paths = list(pool.map(run_sprite_chunk, chunks))
+            list(pool.map(run_sprite_only_chunk, chunks))
 
+    sprite_meta: SpriteMeta | None = None
+    if build_sprite and out_dir is not None:
         sprite_rel = "thumbs/sprite_full.jpg"
         sprite_abs = out_dir / sprite_rel
-        valid_strips = [p for p in strip_paths if p is not None and p.exists()]
+        valid_strips = [c.strip_path for c in chunks if c.strip_path is not None and c.strip_path.exists()]
         if len(valid_strips) == 1:
             valid_strips[0].replace(sprite_abs)
         elif len(valid_strips) > 1:

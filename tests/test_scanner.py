@@ -127,3 +127,55 @@ def test_scan_keyframes_progress_and_sprites(tmp_path: Path) -> None:
     assert phase_events[0][0] < 2.0
     assert sprite is not None
     assert (tmp_path / sprite.url).exists()
+
+
+def test_scan_keyframes_sprite_only_skip_boundary(tmp_path: Path) -> None:
+    import subprocess
+
+    from rvcg.models import BoundaryConfig
+    from rvcg.scanner import scan_keyframes
+
+    vid = tmp_path / "smoke_skip.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=duration=3:size=320x180:rate=10",
+            "-c:v",
+            "libx264",
+            "-g",
+            "5",
+            str(vid),
+        ],
+        stdin=subprocess.DEVNULL,
+        check=True,
+    )
+
+    sprite_progress: list[float] = []
+
+    def on_sprite(completed: float) -> None:
+        sprite_progress.append(completed)
+
+    cfg = BoundaryConfig(workers=2)
+    raw, sprite = scan_keyframes(
+        vid,
+        duration=3.0,
+        config=cfg,
+        out_dir=tmp_path,
+        build_sprite=True,
+        skip_boundary_scan=True,
+        on_sprite=on_sprite,
+    )
+
+    assert len(raw.black_points) == 0
+    assert len(raw.white_points) == 0
+    assert len(raw.visual_cuts) == 0
+    assert sprite is not None
+    assert (tmp_path / sprite.url).exists()
+    assert len(sprite_progress) > 0
