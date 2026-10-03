@@ -54,11 +54,16 @@ src/rvcg/
   $$\sum_{k} \left(\text{novelty}(i_k) - \lambda \cdot \left(\frac{\Delta t_k - T_{\text{target}}}{T_{\text{target}}}\right)^2\right)$$
   subject to hard minimum chapter duration (`min_chapter_sec`) and maximum chapter count (`max_chapters`).
 
-### 3.3 Lossless Muxing & Atomic Replacement (`muxer.py`)
+### 3.3 Lossless Muxing, Atomic Replacement & Scene Trim Export (`muxer.py`)
 - **Container-specific flags**:
   `-movflags +faststart` is strictly valid for MP4-family containers (`.mp4`, `.m4v`, `.mov`). Never pass `-movflags +faststart` when remuxing `.mkv`, `.webm`, `.avi`, or `.flv`.
 - **Atomic staging**:
   Always write the remuxed output to a hidden sibling file in the **same directory** (`.<stem>.rvcg_tmp<suffix>`) so `os.replace(temp_path, video_path)` is an atomic POSIX rename on the same filesystem mount. Clean up `temp_path` in the `except` block if `ffmpeg` exits non-zero.
+- **Scene Trim Export with 3x3 Animated Contact Sheet (`export_scene_cut`)**:
+  - Triggered from the player header via **`⬇ Export Scene`** (`POST /api/chapters/export-scene`, right beside **`✂ Split Scene`**), writing `<video_stem>_cuts/cut_<id>_<HH-MM-SS>.mp4`.
+  - **Center cell (`cell4`, `428x240`)**: Static black card showing centered scene title and `[HH:MM:SS – HH:MM:SS]` source timestamp range (no fade-in/fade-out text).
+  - **Outer 8 cells (`0..3, 5..8`)**: 8 evenly spaced scene preview clips with live-ticking `MM:SS.mmm` timestamps in `Menlo.ttc` (`%{eif\:trunc((t+REL_START)/60)\:d\:2}\:%{eif\:mod(trunc(t+REL_START),60)\:d\:2}.%{eif\:mod(trunc((t+REL_START)*1000),1000)\:d\:3}`).
+  - **Keyframe-aligned lossless body**: Probes the first keyframe `kf_e >= start_time` via `-read_intervals`, encodes the short `[start_time, kf_e]` bridge onto the end of `intro.mp4`, and stream-copies (`-c copy -avoid_negative_ts make_zero`) the scene body from `kf_e + 0.001` to `end_time`.
 
 ### 3.4 Web UI & Local Media Server (`server.py` & `static/webui.html`)
 - **Non-Destructive Scan vs. Explicit Chapter Embedding**:

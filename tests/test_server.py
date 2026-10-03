@@ -73,6 +73,8 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             assert "interact.min.js" in html
             assert "tippy-bundle.umd.min.js" in html
             assert ">Embed Chapters<" in html
+            assert "Split Scene" in html
+            assert "Export Scene" in html
 
         fs_data = _get_json(f"{base_url}/api/fs")
         videos = fs_data.get("videos")
@@ -132,6 +134,24 @@ def test_lifecycle_server_endpoints(tmp_path: Path) -> None:
             },
         )
         assert "00:00:00 - Opening" in str(exported.get("content", ""))
+
+        scene_exported = _post_json(
+            f"{base_url}/api/chapters/export-scene",
+            {
+                "path": str(vid),
+                "scene": {
+                    "scene_number": 1,
+                    "start_time": 0.0,
+                    "end_time": 4.0,
+                    "title": "Opening",
+                    "card_dur": 1.5,
+                    "cell_times": [0.2, 0.6, 1.0, 1.4, 1.8, 2.2, 2.6, 3.0],
+                },
+            },
+        )
+        assert scene_exported.get("ok") is True
+        out_scene_path = Path(str(scene_exported.get("path", "")))
+        assert out_scene_path.exists()
 
         scan_start = _post_json(
             f"{base_url}/api/scan",

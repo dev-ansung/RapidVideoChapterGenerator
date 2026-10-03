@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from rvcg.models import BoundaryConfig, SceneSegment, SpriteMeta
-from rvcg.muxer import embed_chapters_atomic, format_chapters_export
+from rvcg.muxer import embed_chapters_atomic, export_scene_cut, format_chapters_export
 from rvcg.probe import extract_subtitles, probe_duration, probe_embedded_chapters, safe_float
 from rvcg.scanner import scan_keyframes
 from rvcg.solver import compute_cell_times, segments_from_tuples, solve_boundaries
@@ -256,6 +256,44 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
             segments = parse_chapters_payload(raw_ch, self.server.default_config.card_dur)
             content = format_chapters_export(segments, fmt)
             self._send_json(200, json.dumps({"ok": True, "content": content}, ensure_ascii=False))
+            return
+
+        if route == "/api/chapters/export-scene":
+            vid_path, kind = resolve_any_path(str(payload.get("path", "")))
+            raw_scene = payload.get("scene")
+            if vid_path is None or kind != "file" or not isinstance(raw_scene, dict):
+                self._send_json(400, json.dumps({"ok": False, "error": "Invalid video or scene"}, ensure_ascii=False))
+                return
+            s_t = safe_float(raw_scene.get("start_time")) or 0.0
+            e_t = safe_float(raw_scene.get("end_time")) or (s_t + 1.0)
+            idx_num = int(safe_float(raw_scene.get("scene_number") or raw_scene.get("index")) or 1)
+            c_dur = safe_float(raw_scene.get("card_dur")) or self.server.default_config.card_dur
+            raw_title = str(raw_scene.get("title", f"Scene {idx_num:02d}")).strip()
+            title = unicodedata.normalize("NFC", raw_title) if raw_title else f"Scene {idx_num:02d}"
+            raw_cells = raw_scene.get("cell_times")
+            if isinstance(raw_cells, list) and len(raw_cells) == 8:
+                cells = [round(safe_float(x) or s_t, 2) for x in raw_cells]
+            else:
+                cells = compute_cell_times(s_t, e_t, c_dur)
+            seg = SceneSegment(
+                index=idx_num,
+                start_time=round(s_t, 2),
+                end_time=round(e_t, 2),
+                title=title,
+                cell_times=cells,
+                card_dur=c_dur,
+            )
+            try:
+                out_file = export_scene_cut(vid_path, seg)
+                self._send_json(
+                    200,
+                    json.dumps(
+                        {"ok": True, "path": str(out_file), "filename": out_file.name},
+                        ensure_ascii=False,
+                    ),
+                )
+            except Exception as exc:
+                self._send_json(500, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
             return
 
         if route == "/api/scan":
