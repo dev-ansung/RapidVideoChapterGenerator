@@ -993,6 +993,13 @@ function setPhaseUI(id, pct, info) {
 
 async function startScan(videoPath, forceRefresh) {
   currentVideoPath = videoPath;
+  const slashIdx = videoPath.lastIndexOf("/");
+  if (slashIdx > 0) {
+    const parentDir = videoPath.slice(0, slashIdx);
+    if (parentDir !== currentDir || dirInput.value.trim() !== parentDir) {
+      loadDirectory(parentDir);
+    }
+  }
   showView("picker");
   progressBox.classList.remove("hidden");
   for (let i = 1; i <= 5; i++) setPhaseUI(i, 0, "waiting...");
@@ -1301,9 +1308,17 @@ document.getElementById("go-path-btn").addEventListener("click", async () => {
   });
   const data = await res.json();
   if (data.ok && data.kind === "file") {
+    if (data.parent_dir) await loadDirectory(data.parent_dir);
     startScan(data.path, false);
   } else if (data.ok && data.kind === "dir") {
     loadDirectory(data.path);
+  }
+});
+
+dirInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    document.getElementById("go-path-btn").click();
   }
 });
 
