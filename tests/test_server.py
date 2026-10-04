@@ -99,8 +99,13 @@ def test_lifecycle_server_endpoints(tmp_path: Path, monkeypatch: object) -> None
             assert 'id="export-scene-btn"' in html
             assert 'id="player-hud-toast"' in html
             assert 'id="reveal-file-btn"' in html
-            assert "ph-folder-open" in html
-            assert 'value="black-fades"' in html
+            assert 'value="default"' in html
+            assert 'value="balanced"' in html
+            assert 'value="podcast"' in html
+            assert 'value="presentation"' in html
+            assert 'value="anime"' in html
+            assert 'value="action"' in html
+            assert 'value="fine"' in html
 
         for mod_name in (
             "main.js",

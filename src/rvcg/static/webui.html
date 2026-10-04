@@ -45,11 +45,11 @@
     align-items: stretch;
   }
   .gallery.list-view .card-header {
-    width: 240px;
+    width: 260px;
     flex-shrink: 0;
     flex-direction: column;
     align-items: flex-start;
-    justify-content: flex-start;
+    justify-content: space-between;
     border-right: 1px solid var(--color-base-content, rgba(255, 255, 255, 0.1));
     border-bottom: none;
     gap: 8px;
@@ -68,6 +68,7 @@
     aspect-ratio: 144 / 9;
     grid-template-columns: repeat(9, 1fr);
     grid-template-rows: 1fr;
+    border-radius: 0;
   }
   @media (max-width: 768px) {
     .gallery.list-view .chapter-card {
@@ -87,17 +88,25 @@
       grid-template-rows: repeat(3, 1fr);
     }
   }
+  .hide-cut-dots .cut-dot {
+    display: none !important;
+  }
 </style>
 </head>
-<body class="bg-base-100 text-base-content min-h-screen">
+<body class="bg-base-100 text-base-content min-h-screen antialiased">
 
 <main id="picker-view" class="max-w-6xl mx-auto p-4 md:p-6 flex flex-col gap-6">
-  <section class="card bg-base-200 border border-base-content/10 shadow-md">
-    <div class="card-body p-4 md:p-6 flex flex-col gap-4">
+  <section class="card bg-base-200/90 border border-base-content/10 shadow-lg backdrop-blur-sm">
+    <div class="card-body p-4 md:p-6 flex flex-col gap-5">
       <div class="flex items-center justify-between">
-        <span class="text-xl font-bold tracking-tight">RapidVideoChapterGenerator</span>
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold">
+            <i class="ph ph-film-strip text-lg"></i>
+          </div>
+          <span class="text-xl font-bold tracking-tight">RapidVideoChapterGenerator</span>
+        </div>
         <div class="flex items-center gap-2">
-          <select class="theme-switcher-select select select-bordered select-xs" title="Switch DaisyUI Theme">
+          <select class="theme-switcher-select select select-bordered select-xs font-mono" title="Switch DaisyUI Theme">
             <option value="black">black</option>
             <option value="dark">dark</option>
             <option value="night">night</option>
@@ -112,56 +121,76 @@
             <option value="cupcake">cupcake</option>
             <option value="emerald">emerald</option>
           </select>
-          <button type="button" id="resume-browser-btn" class="btn btn-outline btn-sm hidden">Return to Scene Browser →</button>
-          <button type="button" class="open-settings-btn btn btn-ghost btn-sm">⚙ Settings</button>
+          <button type="button" id="resume-browser-btn" class="btn btn-outline btn-sm gap-1.5 hidden">
+            <span>Return to Scenes</span><i class="ph ph-arrow-right"></i>
+          </button>
+          <button type="button" class="open-settings-btn btn btn-ghost btn-sm gap-1">
+            <i class="ph ph-gear text-base"></i><span>Settings</span>
+          </button>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
-        <button type="button" id="up-dir-btn" class="btn btn-outline btn-sm">↑ Parent</button>
-        <input id="dir-input" class="input input-bordered input-sm flex-1 font-mono text-xs" placeholder="Directory or paste/drop video file path..." />
-        <button type="button" id="go-path-btn" class="btn btn-primary btn-sm">Open</button>
-        <button type="button" id="redetect-btn" class="btn btn-outline btn-sm" data-tippy-content="Re-scan video using current threshold settings (bypassing embedded chapters)">↻ Re-Detect</button>
+        <button type="button" id="up-dir-btn" class="btn btn-outline btn-sm gap-1">
+          <i class="ph ph-arrow-up"></i><span>Parent</span>
+        </button>
+        <div class="relative flex-1">
+          <input id="dir-input" class="input input-bordered input-sm w-full font-mono text-xs pl-3 pr-8" placeholder="Directory or paste/drop video file path..." />
+        </div>
+        <button type="button" id="go-path-btn" class="btn btn-primary btn-sm gap-1 shadow-sm">
+          <i class="ph ph-folder-open"></i><span>Open</span>
+        </button>
+        <button type="button" id="redetect-btn" class="btn btn-outline btn-sm gap-1" data-tippy-content="Re-scan video using current threshold settings (bypassing embedded chapters)">
+          <i class="ph ph-arrows-clockwise"></i><span>Re-Detect</span>
+        </button>
       </div>
 
-      <div id="file-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-72 overflow-y-auto p-1 bg-base-300/40 rounded-box border border-base-content/5"></div>
+      <div id="file-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-72 overflow-y-auto p-1.5 bg-base-300/40 rounded-box border border-base-content/10"></div>
 
       <div class="flex flex-col gap-4 pt-2 border-t border-base-content/10">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-base-content/70">Detector Configuration</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-1.5">
+            <i class="ph ph-sliders text-sm"></i><span>Detector Configuration</span>
+          </span>
           <span class="text-xs text-base-content/50">Fades-only is default for highest precision</span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <fieldset class="fieldset" data-tippy-content="Predefined pipeline profile that configures stages and thresholds.">
-            <legend class="fieldset-legend text-xs">Preset</legend>
-            <select id="preset-select" class="select select-bordered select-sm w-full">
-              <option value="default">default (Fades only)</option>
-              <option value="all-stages">all-stages (Fades + Visual + Subdivide)</option>
-              <option value="black-fades">black-fades</option>
-              <option value="podcast">podcast</option>
-              <option value="presentation">presentation</option>
-              <option value="action">action</option>
+            <div class="flex items-center justify-between">
+              <legend class="fieldset-legend text-xs font-semibold">Preset Profile</legend>
+              <span id="preset-badge" class="badge badge-xs badge-neutral font-mono">default</span>
+            </div>
+            <select id="preset-select" class="select select-bordered select-sm w-full font-medium">
+              <option value="default">movie (Fades only - High Precision)</option>
+              <option value="balanced">balanced (Fades + Visual + Subdivide)</option>
+              <option value="podcast">podcast (Interviews &amp; Long Talks)</option>
+              <option value="presentation">presentation (Slides &amp; Keynotes)</option>
+              <option value="anime">anime (TV Episodes &amp; Series)</option>
+              <option value="action">action (Sports, Gaming &amp; Action)</option>
+              <option value="fine">fine (Micro / Granular Chapters)</option>
+              <option value="custom" disabled>custom (Manual Overrides)</option>
             </select>
+            <div id="preset-desc" class="text-[11px] text-base-content/60 mt-1 leading-snug">High-precision fade detection only. Ideal for films, cinema, and narrative storytelling where scene transitions are intentional fades.</div>
           </fieldset>
 
           <fieldset class="fieldset" data-tippy-content="Minimum allowed chapter duration in seconds across all stages. Suppresses cuts closer than this gap and merges short trailing segments.">
-            <legend class="fieldset-legend text-xs">Min Scene (s)</legend>
-            <input id="cfg-min" class="input input-bordered input-sm w-full" type="number" step="5" min="5" />
+            <legend class="fieldset-legend text-xs font-semibold">Min Scene (s)</legend>
+            <input id="cfg-min" class="input input-bordered input-sm w-full font-mono" type="number" step="5" min="5" />
           </fieldset>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black and fade-to-white transitions.">
+          <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3.5 flex flex-col gap-2.5 transition-opacity" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black and fade-to-white transitions.">
             <div class="flex items-center justify-between">
               <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                <input id="cfg-enable-black" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
+                <input id="cfg-enable-black" type="checkbox" class="toggle toggle-primary toggle-sm" checked />
                 <span>1. Fades (Black / White)</span>
               </label>
-              <span id="stat-black" class="text-xs text-base-content/60 font-mono"></span>
+              <span id="stat-black" class="text-[11px] text-base-content/60 font-mono"></span>
             </div>
             <fieldset class="fieldset" data-tippy-content="Minimum fade duration in seconds required to register a fade transition.">
               <legend class="fieldset-legend text-[11px]">Min Fade (s)</legend>
-              <input id="cfg-black-dur" class="input input-bordered input-xs w-full" type="number" step="0.05" min="0.05" max="5.0" />
+              <input id="cfg-black-dur" class="input input-bordered input-xs w-full font-mono" type="number" step="0.05" min="0.05" max="5.0" />
             </fieldset>
 
             <details class="collapse collapse-arrow bg-base-300/60 border border-base-content/10 rounded-box mt-1">
@@ -172,11 +201,11 @@
                   <div class="grid grid-cols-2 gap-2">
                     <fieldset class="fieldset">
                       <legend class="fieldset-legend text-[10px]">Min Coverage %</legend>
-                      <input id="cfg-black-pic-th" class="input input-bordered input-xs w-full" type="number" step="1" min="50" max="100" />
+                      <input id="cfg-black-pic-th" class="input input-bordered input-xs w-full font-mono" type="number" step="1" min="50" max="100" />
                     </fieldset>
                     <fieldset class="fieldset">
                       <legend class="fieldset-legend text-[10px]">Max Pixel Luma %</legend>
-                      <input id="cfg-black-pix-th" class="input input-bordered input-xs w-full" type="number" step="1" min="1" max="50" />
+                      <input id="cfg-black-pix-th" class="input input-bordered input-xs w-full font-mono" type="number" step="1" min="1" max="50" />
                     </fieldset>
                   </div>
                 </div>
@@ -191,11 +220,11 @@
                   <div class="grid grid-cols-2 gap-2">
                     <fieldset class="fieldset">
                       <legend class="fieldset-legend text-[10px]">Min Coverage %</legend>
-                      <input id="cfg-white-pic-th" class="input input-bordered input-xs w-full" type="number" step="1" min="50" max="100" />
+                      <input id="cfg-white-pic-th" class="input input-bordered input-xs w-full font-mono" type="number" step="1" min="50" max="100" />
                     </fieldset>
                     <fieldset class="fieldset">
                       <legend class="fieldset-legend text-[10px]">Min Pixel Luma %</legend>
-                      <input id="cfg-white-pix-th" class="input input-bordered input-xs w-full" type="number" step="1" min="50" max="99" />
+                      <input id="cfg-white-pix-th" class="input input-bordered input-xs w-full font-mono" type="number" step="1" min="50" max="99" />
                     </fieldset>
                   </div>
                 </div>
@@ -203,43 +232,43 @@
             </details>
           </div>
 
-          <div id="stage-visual" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2 opacity-50" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
+          <div id="stage-visual" class="card bg-base-300/40 border border-base-content/10 p-3.5 flex flex-col gap-2.5 opacity-50 transition-opacity" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
             <div class="flex items-center justify-between">
               <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                <input id="cfg-enable-visual" type="checkbox" class="checkbox checkbox-sm checkbox-primary" />
+                <input id="cfg-enable-visual" type="checkbox" class="toggle toggle-primary toggle-sm" />
                 <span>2. Visual Cuts</span>
               </label>
-              <span id="stat-visual" class="text-xs text-base-content/60 font-mono"></span>
+              <span id="stat-visual" class="text-[11px] text-base-content/60 font-mono"></span>
             </div>
             <fieldset class="fieldset" data-tippy-content="Visual cut sensitivity (0.05–0.95). Lower values detect subtler changes; higher values require sharper transitions.">
               <legend class="fieldset-legend text-[11px]">Visual Cut Threshold</legend>
-              <input id="cfg-th" class="input input-bordered input-xs w-full" type="number" step="0.01" min="0.05" max="0.95" disabled />
+              <input id="cfg-th" class="input input-bordered input-xs w-full font-mono" type="number" step="0.01" min="0.05" max="0.95" disabled />
             </fieldset>
 
             <details class="collapse collapse-arrow bg-base-300/60 border border-base-content/10 rounded-box mt-1">
               <summary class="collapse-title text-[11px] font-semibold py-1.5 min-h-0 px-2.5">Visual Cut Info</summary>
               <div class="collapse-content text-[11px] text-base-content/70 pt-1 px-2.5">
-                Calculates frame-to-frame pixel differences. Scores $\ge 0.35$ detect hard cuts and camera angle switches.
+                Calculates frame-to-frame pixel differences. Scores &ge; 0.35 detect hard cuts and camera angle switches.
               </div>
             </details>
           </div>
 
-          <div id="stage-subdivide" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2 opacity-50" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
+          <div id="stage-subdivide" class="card bg-base-300/40 border border-base-content/10 p-3.5 flex flex-col gap-2.5 opacity-50 transition-opacity" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
             <div class="flex items-center justify-between">
               <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                <input id="cfg-enable-sub" type="checkbox" class="checkbox checkbox-sm checkbox-primary" />
+                <input id="cfg-enable-sub" type="checkbox" class="toggle toggle-primary toggle-sm" />
                 <span>3. Subdivide Long</span>
               </label>
-              <span id="stat-sub" class="text-xs text-base-content/60 font-mono"></span>
+              <span id="stat-sub" class="text-[11px] text-base-content/60 font-mono"></span>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <fieldset class="fieldset" data-tippy-content="Maximum chapter duration in seconds before automatic subdivision is triggered.">
                 <legend class="fieldset-legend text-[11px]">Max (s)</legend>
-                <input id="cfg-max" class="input input-bordered input-xs w-full" type="number" step="10" disabled />
+                <input id="cfg-max" class="input input-bordered input-xs w-full font-mono" type="number" step="10" disabled />
               </fieldset>
               <fieldset class="fieldset" data-tippy-content="Target chapter length in seconds when subdividing chapters longer than Max (s).">
                 <legend class="fieldset-legend text-[11px]">Target (s)</legend>
-                <input id="cfg-target" class="input input-bordered input-xs w-full" type="number" step="10" disabled />
+                <input id="cfg-target" class="input input-bordered input-xs w-full font-mono" type="number" step="10" disabled />
               </fieldset>
             </div>
 
@@ -253,19 +282,21 @@
         </div>
 
         <details class="collapse collapse-arrow bg-base-300/30 border border-base-content/10 rounded-box">
-          <summary class="collapse-title text-xs font-semibold py-2 min-h-0 px-3">⚙ Advanced Pipeline &amp; Output Parameters</summary>
+          <summary class="collapse-title text-xs font-semibold py-2 min-h-0 px-3 flex items-center gap-1.5">
+            <i class="ph ph-gear-six text-sm"></i><span>Advanced Pipeline &amp; Output Parameters</span>
+          </summary>
           <div class="collapse-content grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs px-3">
             <fieldset class="fieldset">
               <legend class="fieldset-legend text-[11px]">Parallel FFmpeg Workers</legend>
-              <input id="cfg-workers" class="input input-bordered input-xs w-full" type="number" step="1" min="1" max="16" />
+              <input id="cfg-workers" class="input input-bordered input-xs w-full font-mono" type="number" step="1" min="1" max="16" />
             </fieldset>
             <fieldset class="fieldset">
               <legend class="fieldset-legend text-[11px]">Chapter Title Template</legend>
-              <input id="cfg-title-template" class="input input-bordered input-xs w-full" type="text" placeholder="Scene {n:02d}" />
+              <input id="cfg-title-template" class="input input-bordered input-xs w-full font-mono" type="text" placeholder="Scene {n:02d}" />
             </fieldset>
             <fieldset class="fieldset">
               <legend class="fieldset-legend text-[11px]">Preview Card Duration (s)</legend>
-              <input id="cfg-card-dur" class="input input-bordered input-xs w-full" type="number" step="0.5" min="2.0" max="60.0" />
+              <input id="cfg-card-dur" class="input input-bordered input-xs w-full font-mono" type="number" step="0.5" min="2.0" max="60.0" />
             </fieldset>
           </div>
         </details>
@@ -273,50 +304,97 @@
     </div>
   </section>
 
-  <div id="progress-box" class="collapse collapse-arrow bg-base-200 border border-base-content/10 shadow-md hidden">
+  <div id="progress-box" class="collapse collapse-arrow bg-base-200/90 border border-base-content/10 shadow-lg backdrop-blur-sm hidden">
     <input type="checkbox" checked />
     <div class="collapse-title flex items-center justify-between pr-10 text-sm font-semibold">
-      <span id="progress-title">Scan Diagnostics</span>
+      <span id="progress-title" class="flex items-center gap-2">
+        <i class="ph ph-activity text-primary text-base"></i><span>Scan Diagnostics</span>
+      </span>
       <span id="progress-summary" class="text-xs text-base-content/60 font-mono font-normal"></span>
     </div>
-    <div class="collapse-content flex flex-col gap-2 text-xs">
-      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[1/5] Embedded chapter check</span><progress class="progress progress-primary w-full" id="p-fill-1" value="0" max="100"></progress><span id="p-pct-1" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-1">waiting...</span></div>
-      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[2/5] Keyframe visual scan</span><progress class="progress progress-primary w-full" id="p-fill-2" value="0" max="100"></progress><span id="p-pct-2" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-2">waiting...</span></div>
-      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[3/5] Priority anchor placement</span><progress class="progress progress-primary w-full" id="p-fill-3" value="0" max="100"></progress><span id="p-pct-3" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-3">waiting...</span></div>
-      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[4/5] Long-segment subdivision</span><progress class="progress progress-primary w-full" id="p-fill-4" value="0" max="100"></progress><span id="p-pct-4" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-4">waiting...</span></div>
-      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>[5/5] Tail merge & cell sampling</span><progress class="progress progress-primary w-full" id="p-fill-5" value="0" max="100"></progress><span id="p-pct-5" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-5">waiting...</span></div>
-      <div class="grid grid-cols-[160px_1fr_40px_100px] items-center gap-2"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Timeline sprite sheet</span><progress class="progress progress-secondary w-full" id="p-fill-spr" value="0" max="100"></progress><span id="p-pct-spr" class="text-right font-mono">0%</span><span class="truncate text-base-content/60" id="p-info-spr">rendering...</span></div>
-      <textarea id="scan-log" class="textarea textarea-bordered font-mono text-[11px] h-28 resize-y mt-2" readonly spellcheck="false" placeholder="Scan diagnostic log..."></textarea>
+    <div class="collapse-content flex flex-col gap-2.5 text-xs">
+      <div class="grid grid-cols-[180px_1fr_45px_130px] sm:grid-cols-[200px_1fr_50px_150px] items-center gap-2.5">
+        <span class="font-medium text-base-content/80">[1/5] Embedded check</span>
+        <progress class="progress progress-primary w-full" id="p-fill-1" value="0" max="100"></progress>
+        <span id="p-pct-1" class="text-right font-mono text-base-content/70">0%</span>
+        <span class="truncate text-base-content/60 font-mono" id="p-info-1">waiting...</span>
+      </div>
+      <div class="grid grid-cols-[180px_1fr_45px_130px] sm:grid-cols-[200px_1fr_50px_150px] items-center gap-2.5">
+        <span class="font-medium text-base-content/80">[2/5] Keyframe visual scan</span>
+        <progress class="progress progress-primary w-full" id="p-fill-2" value="0" max="100"></progress>
+        <span id="p-pct-2" class="text-right font-mono text-base-content/70">0%</span>
+        <span class="truncate text-base-content/60 font-mono" id="p-info-2">waiting...</span>
+      </div>
+      <div class="grid grid-cols-[180px_1fr_45px_130px] sm:grid-cols-[200px_1fr_50px_150px] items-center gap-2.5">
+        <span class="font-medium text-base-content/80">[3/5] Priority anchor placement</span>
+        <progress class="progress progress-primary w-full" id="p-fill-3" value="0" max="100"></progress>
+        <span id="p-pct-3" class="text-right font-mono text-base-content/70">0%</span>
+        <span class="truncate text-base-content/60 font-mono" id="p-info-3">waiting...</span>
+      </div>
+      <div class="grid grid-cols-[180px_1fr_45px_130px] sm:grid-cols-[200px_1fr_50px_150px] items-center gap-2.5">
+        <span class="font-medium text-base-content/80">[4/5] Long-segment subdiv</span>
+        <progress class="progress progress-primary w-full" id="p-fill-4" value="0" max="100"></progress>
+        <span id="p-pct-4" class="text-right font-mono text-base-content/70">0%</span>
+        <span class="truncate text-base-content/60 font-mono" id="p-info-4">waiting...</span>
+      </div>
+      <div class="grid grid-cols-[180px_1fr_45px_130px] sm:grid-cols-[200px_1fr_50px_150px] items-center gap-2.5">
+        <span class="font-medium text-base-content/80">[5/5] Tail merge &amp; cell sample</span>
+        <progress class="progress progress-primary w-full" id="p-fill-5" value="0" max="100"></progress>
+        <span id="p-pct-5" class="text-right font-mono text-base-content/70">0%</span>
+        <span class="truncate text-base-content/60 font-mono" id="p-info-5">waiting...</span>
+      </div>
+      <div class="grid grid-cols-[180px_1fr_45px_130px] sm:grid-cols-[200px_1fr_50px_150px] items-center gap-2.5">
+        <span class="font-medium text-base-content/80">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Timeline sprite sheet</span>
+        <progress class="progress progress-secondary w-full" id="p-fill-spr" value="0" max="100"></progress>
+        <span id="p-pct-spr" class="text-right font-mono text-base-content/70">0%</span>
+        <span class="truncate text-base-content/60 font-mono" id="p-info-spr">rendering...</span>
+      </div>
+      <textarea id="scan-log" class="textarea textarea-bordered font-mono text-[11px] h-28 resize-y mt-2 bg-base-300/40" readonly spellcheck="false" placeholder="Scan diagnostic log..."></textarea>
     </div>
   </div>
 </main>
 
 <main id="browser-view" class="flex flex-col min-h-screen hidden">
-  <header class="navbar bg-base-200 border-b border-base-content/10 px-4 py-2 sticky top-0 z-20 flex justify-between gap-2 shadow-sm">
-    <div class="flex items-center gap-2 flex-1 min-w-0">
-      <button type="button" id="switch-video-btn" class="btn btn-outline btn-sm">← Videos</button>
-      <div class="font-bold text-sm truncate max-w-xs md:max-w-md" id="brand-title"></div>
-      <span id="count-label" class="badge badge-ghost badge-sm font-mono hidden sm:inline-flex"></span>
-      <span id="status-pill" class="badge badge-neutral badge-sm"></span>
-      <button type="button" id="reveal-file-btn" class="btn btn-ghost btn-xs btn-circle text-primary hidden"><i class="ph ph-folder-open text-base"></i></button>
+  <header class="navbar bg-base-200/90 border-b border-base-content/10 px-4 py-2 sticky top-0 z-20 flex justify-between gap-3 shadow-md backdrop-blur-md">
+    <div class="flex items-center gap-2.5 flex-1 min-w-0">
+      <button type="button" id="switch-video-btn" class="btn btn-outline btn-sm gap-1.5">
+        <i class="ph ph-arrow-left text-base"></i><span class="hidden sm:inline">Videos</span>
+      </button>
+      <div class="font-bold text-sm truncate max-w-[180px] sm:max-w-xs md:max-w-md" id="brand-title"></div>
+      <span id="count-label" class="badge badge-neutral badge-sm font-mono hidden md:inline-flex"></span>
+      <span id="status-pill" class="badge badge-success badge-sm hidden sm:inline-flex"></span>
+      <button type="button" id="reveal-file-btn" class="btn btn-ghost btn-xs btn-circle text-primary hidden" title="Reveal in File Manager">
+        <i class="ph ph-folder-open text-base"></i>
+      </button>
     </div>
     <div class="flex items-center gap-2 shrink-0">
-      <input id="search-input" class="input input-bordered input-sm w-36 sm:w-56" type="search" placeholder="Search chapter..." />
-      <button type="button" id="save-chapters-btn" class="btn btn-primary btn-sm">Embed Chapters</button>
-      <div class="relative">
-        <button type="button" id="export-menu-btn" class="btn btn-outline btn-sm">Export ▾</button>
-        <ul id="export-dropdown" class="menu bg-base-200 border border-base-content/10 rounded-box shadow-xl absolute right-0 top-full mt-1 w-48 z-30 hidden p-1">
-          <li><button type="button" data-fmt="youtube">YouTube Timestamps</button></li>
-          <li><button type="button" data-fmt="json">JSON</button></li>
-          <li><button type="button" data-fmt="csv">CSV</button></li>
-          <li><button type="button" data-fmt="ffmetadata">FFMETADATA</button></li>
+      <div class="relative hidden sm:block">
+        <i class="ph ph-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-base-content/40 text-sm pointer-events-none"></i>
+        <input id="search-input" class="input input-bordered input-sm pl-8 w-36 md:w-52 text-xs font-medium" type="search" placeholder="Search chapters..." />
+      </div>
+      <button type="button" id="save-chapters-btn" class="btn btn-primary btn-sm gap-1.5 shadow-sm">
+        <i class="ph ph-floppy-disk text-base"></i><span class="hidden sm:inline">Embed Chapters</span><span class="sm:hidden">Embed</span>
+      </button>
+      <div class="dropdown dropdown-end">
+        <button tabindex="0" type="button" id="export-menu-btn" class="btn btn-outline btn-sm gap-1">
+          <i class="ph ph-export text-base"></i><span>Export</span><i class="ph ph-caret-down text-xs"></i>
+        </button>
+        <ul tabindex="0" id="export-dropdown" class="dropdown-content menu bg-base-300 border border-base-content/15 rounded-box shadow-2xl mt-1 w-52 z-30 p-1.5 gap-0.5 backdrop-blur-md hidden">
+          <li><button type="button" data-fmt="youtube" class="flex items-center gap-2 text-xs py-2"><i class="ph ph-youtube-logo text-base text-red-500"></i><span>YouTube Timestamps</span></button></li>
+          <li><button type="button" data-fmt="json" class="flex items-center gap-2 text-xs py-2"><i class="ph ph-code text-base text-blue-400"></i><span>JSON Manifest</span></button></li>
+          <li><button type="button" data-fmt="csv" class="flex items-center gap-2 text-xs py-2"><i class="ph ph-file-csv text-base text-emerald-400"></i><span>CSV Spreadsheet</span></button></li>
+          <li><button type="button" data-fmt="ffmetadata" class="flex items-center gap-2 text-xs py-2"><i class="ph ph-terminal text-base text-purple-400"></i><span>FFMETADATA1 Atom</span></button></li>
         </ul>
       </div>
-      <div class="join hidden sm:inline-flex">
-        <button type="button" class="view-btn btn btn-sm join-item btn-active" data-view="grid">Grid</button>
-        <button type="button" class="view-btn btn btn-sm join-item" data-view="list">List</button>
+      <div class="join hidden md:inline-flex border border-base-content/15 rounded-btn overflow-hidden p-0.5 bg-base-300/60">
+        <button type="button" class="view-btn btn btn-xs join-item btn-active gap-1" data-view="grid" title="3×3 Contact Grid View">
+          <i class="ph ph-squares-four text-sm"></i><span class="hidden lg:inline">Grid</span>
+        </button>
+        <button type="button" class="view-btn btn btn-xs join-item gap-1" data-view="list" title="144:9 Filmstrip List View">
+          <i class="ph ph-list text-sm"></i><span class="hidden lg:inline">List</span>
+        </button>
       </div>
-      <select class="theme-switcher-select select select-bordered select-sm hidden sm:inline-flex" title="Switch DaisyUI Theme">
+      <select class="theme-switcher-select select select-bordered select-sm hidden sm:inline-flex font-mono text-xs" title="Switch DaisyUI Theme">
         <option value="black">black</option>
         <option value="dark">dark</option>
         <option value="night">night</option>
@@ -331,23 +409,30 @@
         <option value="cupcake">cupcake</option>
         <option value="emerald">emerald</option>
       </select>
-      <button type="button" class="open-settings-btn btn btn-ghost btn-sm">⚙ Settings</button>
+      <button type="button" class="open-settings-btn btn btn-ghost btn-sm gap-1" title="Settings">
+        <i class="ph ph-gear text-base"></i>
+      </button>
     </div>
   </header>
 
   <section id="gallery" class="gallery grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 flex-1"></section>
 </main>
 
-<div id="player-shell" class="player-shell fixed z-50 bg-base-300 border border-base-content/20 rounded-box shadow-2xl flex flex-col overflow-hidden hidden">
-  <div class="flex items-center justify-between px-3 py-2 bg-base-200 border-b border-base-content/10 cursor-move select-none shrink-0">
+<div id="player-shell" class="player-shell fixed z-50 bg-base-300/95 border border-base-content/20 rounded-box shadow-2xl flex flex-col overflow-hidden backdrop-blur-md hidden">
+  <div class="flex items-center justify-between px-3 py-2 bg-base-200/95 border-b border-base-content/10 cursor-move select-none shrink-0">
     <div class="flex items-center gap-2 min-w-0 mr-2">
-      <span id="now-badge" class="badge badge-primary badge-sm font-mono shrink-0"></span>
+      <i class="ph ph-dots-six-vertical text-base-content/40 text-base shrink-0"></i>
+      <span id="now-badge" class="badge badge-primary badge-sm font-mono shrink-0 font-bold"></span>
       <span id="now-title" class="font-semibold text-xs truncate"></span>
-      <span id="now-range" class="text-xs text-base-content/60 font-mono truncate hidden sm:inline"></span>
+      <span id="now-range" class="text-[11px] text-base-content/60 font-mono truncate hidden sm:inline"></span>
     </div>
     <div class="flex items-center gap-1.5 shrink-0">
-      <button id="split-here-btn" class="btn btn-primary btn-xs" type="button" data-tippy-content="Split scene at current timestamp (s)">✂ Split</button>
-      <button id="export-scene-btn" class="btn btn-outline btn-xs" type="button" data-tippy-content="Export current scene clip (e)">⬇ Export</button>
+      <button id="split-here-btn" class="btn btn-primary btn-xs gap-1 shadow-sm" type="button" data-tippy-content="Split scene at current timestamp (s)">
+        <i class="ph ph-scissors text-xs"></i><span>Split</span>
+      </button>
+      <button id="export-scene-btn" class="btn btn-outline btn-xs gap-1" type="button" data-tippy-content="Export current scene clip (e)">
+        <i class="ph ph-download-simple text-xs"></i><span>Export</span>
+      </button>
       <button id="close-player-btn" class="btn btn-ghost btn-xs btn-circle" type="button">✕</button>
     </div>
   </div>
@@ -358,35 +443,41 @@
 </div>
 
 <dialog id="export-popover" class="modal">
-  <div class="modal-box max-w-2xl">
+  <div class="modal-box max-w-2xl bg-base-200 border border-base-content/15 shadow-2xl">
     <div class="flex items-center justify-between border-b border-base-content/10 pb-3 mb-3">
-      <h3 id="export-title" class="font-bold text-base">Export Chapters</h3>
+      <h3 id="export-title" class="font-bold text-base flex items-center gap-2">
+        <i class="ph ph-file-arrow-down text-primary text-lg"></i><span>Export Chapters</span>
+      </h3>
       <div class="flex items-center gap-2">
-        <button id="copy-export-btn" class="btn btn-primary btn-sm" type="button">Copy</button>
+        <button id="copy-export-btn" class="btn btn-primary btn-sm gap-1 shadow-sm" type="button">
+          <i class="ph ph-copy text-sm"></i><span>Copy</span>
+        </button>
         <button id="close-export" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
       </div>
     </div>
-    <textarea id="export-textarea" class="textarea textarea-bordered font-mono text-xs w-full h-72 resize-y" readonly></textarea>
+    <textarea id="export-textarea" class="textarea textarea-bordered font-mono text-xs w-full h-72 resize-y bg-base-300/60" readonly></textarea>
   </div>
 </dialog>
 
 <dialog id="settings-popover" class="modal">
-  <div class="modal-box max-w-md flex flex-col gap-4">
+  <div class="modal-box max-w-md flex flex-col gap-4 bg-base-200 border border-base-content/15 shadow-2xl">
     <div class="flex items-center justify-between border-b border-base-content/10 pb-3">
-      <h3 class="font-bold text-base">⚙ Application Settings</h3>
+      <h3 class="font-bold text-base flex items-center gap-2">
+        <i class="ph ph-gear text-primary text-lg"></i><span>Application Settings</span>
+      </h3>
       <button id="close-settings" class="btn btn-ghost btn-sm btn-circle" type="button">✕</button>
     </div>
 
     <div class="flex flex-col gap-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-base-200 rounded-box border border-base-content/10">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-base-300/40 rounded-box border border-base-content/10">
         <fieldset class="fieldset">
-          <legend class="fieldset-legend text-xs">Workers</legend>
-          <input id="set-cfg-workers" class="input input-bordered input-sm w-full" type="number" step="1" min="1" max="16" />
+          <legend class="fieldset-legend text-xs font-semibold">Workers</legend>
+          <input id="set-cfg-workers" class="input input-bordered input-sm w-full font-mono" type="number" step="1" min="1" max="16" />
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend text-xs">Theme</legend>
-          <select id="pref-theme-select" class="select select-bordered select-sm w-full">
+          <legend class="fieldset-legend text-xs font-semibold">Theme</legend>
+          <select id="pref-theme-select" class="select select-bordered select-sm w-full font-mono">
             <option value="black">black (Default)</option>
             <option value="dark">dark</option>
             <option value="night">night</option>
@@ -406,10 +497,10 @@
 
       <label class="flex items-center gap-3 text-sm cursor-pointer">
         <input id="pref-show-cut-dot" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
-        <span>Show cut origin indicator on scene cards</span>
+        <span class="font-medium">Show cut origin indicator on scene cards</span>
       </label>
 
-      <div class="flex flex-col gap-2 p-3 bg-base-200 rounded-box text-xs border border-base-content/10">
+      <div class="flex flex-col gap-2 p-3 bg-base-300/40 rounded-box text-xs border border-base-content/10">
         <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content/40"></span><span>Dark Gray — Black fade transition (Stage 1)</span></div>
         <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-white border border-base-content/20 shadow-sm"></span><span>White — White fade transition (Stage 1)</span></div>
         <div class="flex items-center gap-2"><span class="cut-dot inline-block w-2.5 h-2.5 rounded-full bg-base-content"></span><span>Bright Gray — Visual scene transition (Stage 2)</span></div>
@@ -428,6 +519,7 @@
 <script>
   window.__RVCG_BOOT__ = {
     defaultCfg: __DEFAULT_CFG__,
+    presets: __PRESETS__,
     initDir: __INIT_DIR__,
     initVid: __INIT_VID__,
   };

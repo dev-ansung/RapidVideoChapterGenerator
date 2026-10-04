@@ -1,6 +1,6 @@
 import { state, dom } from "./state.js";
 import { exportChaptersText, saveChapters, setStatus } from "./api.js";
-import { syncStageUI } from "./picker.js";
+import { applyPreset, syncStageUI } from "./picker.js";
 
 export function syncCutDotPreference() {
   if (!dom.prefShowCutDot) return;
@@ -53,60 +53,75 @@ export function saveSettingsToLocalStorage() {
 export function loadSettingsFromLocalStorage() {
   try {
     const presetVal = localStorage.getItem("rvcg_preset");
-    if (presetVal && document.getElementById("preset-select")) {
-      document.getElementById("preset-select").value = presetVal;
+    if (presetVal && presetVal !== "custom" && window.__RVCG_BOOT__?.presets?.[presetVal]) {
+      applyPreset(presetVal);
+      return;
     }
 
-    const minVal = localStorage.getItem("rvcg_cfg_min");
-    if (minVal && dom.cfgMin) dom.cfgMin.value = minVal;
+    if (presetVal === "custom") {
+      const presetBadge = document.getElementById("preset-badge");
+      if (presetBadge) presetBadge.textContent = "custom";
+      const presetDesc = document.getElementById("preset-desc");
+      if (presetDesc) presetDesc.textContent = "Manual configuration overrides active.";
+      const presetSelect = document.getElementById("preset-select");
+      if (presetSelect) {
+        const customOpt = presetSelect.querySelector('option[value="custom"]');
+        if (customOpt) customOpt.disabled = false;
+        presetSelect.value = "custom";
+      }
 
-    const bdVal = localStorage.getItem("rvcg_cfg_black_dur");
-    if (bdVal && dom.cfgBlackDur) dom.cfgBlackDur.value = bdVal;
+      const minVal = localStorage.getItem("rvcg_cfg_min");
+      if (minVal && dom.cfgMin) dom.cfgMin.value = minVal;
 
-    const bPicVal = localStorage.getItem("rvcg_cfg_black_pic_th");
-    if (bPicVal && dom.cfgBlackPicTh) dom.cfgBlackPicTh.value = bPicVal;
+      const bdVal = localStorage.getItem("rvcg_cfg_black_dur");
+      if (bdVal && dom.cfgBlackDur) dom.cfgBlackDur.value = bdVal;
 
-    const bPixVal = localStorage.getItem("rvcg_cfg_black_pix_th");
-    if (bPixVal && dom.cfgBlackPixTh) dom.cfgBlackPixTh.value = bPixVal;
+      const bPicVal = localStorage.getItem("rvcg_cfg_black_pic_th");
+      if (bPicVal && dom.cfgBlackPicTh) dom.cfgBlackPicTh.value = bPicVal;
 
-    const wPicVal = localStorage.getItem("rvcg_cfg_white_pic_th");
-    if (wPicVal && dom.cfgWhitePicTh) dom.cfgWhitePicTh.value = wPicVal;
+      const bPixVal = localStorage.getItem("rvcg_cfg_black_pix_th");
+      if (bPixVal && dom.cfgBlackPixTh) dom.cfgBlackPixTh.value = bPixVal;
 
-    const wPixVal = localStorage.getItem("rvcg_cfg_white_pix_th");
-    if (wPixVal && dom.cfgWhitePixTh) dom.cfgWhitePixTh.value = wPixVal;
+      const wPicVal = localStorage.getItem("rvcg_cfg_white_pic_th");
+      if (wPicVal && dom.cfgWhitePicTh) dom.cfgWhitePicTh.value = wPicVal;
 
-    const thVal = localStorage.getItem("rvcg_cfg_th");
-    if (thVal && dom.cfgTh) dom.cfgTh.value = thVal;
+      const wPixVal = localStorage.getItem("rvcg_cfg_white_pix_th");
+      if (wPixVal && dom.cfgWhitePixTh) dom.cfgWhitePixTh.value = wPixVal;
 
-    const maxVal = localStorage.getItem("rvcg_cfg_max");
-    if (maxVal && dom.cfgMax) dom.cfgMax.value = maxVal;
+      const thVal = localStorage.getItem("rvcg_cfg_th");
+      if (thVal && dom.cfgTh) dom.cfgTh.value = thVal;
 
-    const targetVal = localStorage.getItem("rvcg_cfg_target");
-    if (targetVal && dom.cfgTarget) dom.cfgTarget.value = targetVal;
+      const maxVal = localStorage.getItem("rvcg_cfg_max");
+      if (maxVal && dom.cfgMax) dom.cfgMax.value = maxVal;
 
-    const workersVal = localStorage.getItem("rvcg_cfg_workers");
-    if (workersVal && dom.cfgWorkers) dom.cfgWorkers.value = workersVal;
+      const targetVal = localStorage.getItem("rvcg_cfg_target");
+      if (targetVal && dom.cfgTarget) dom.cfgTarget.value = targetVal;
 
-    const titleVal = localStorage.getItem("rvcg_cfg_title_template");
-    if (titleVal && dom.cfgTitleTemplate) dom.cfgTitleTemplate.value = titleVal;
+      const workersVal = localStorage.getItem("rvcg_cfg_workers");
+      if (workersVal && dom.cfgWorkers) dom.cfgWorkers.value = workersVal;
 
-    const cardVal = localStorage.getItem("rvcg_cfg_card_dur");
-    if (cardVal && dom.cfgCardDur) dom.cfgCardDur.value = cardVal;
+      const titleVal = localStorage.getItem("rvcg_cfg_title_template");
+      if (titleVal && dom.cfgTitleTemplate) dom.cfgTitleTemplate.value = titleVal;
 
-    const ebVal = localStorage.getItem("rvcg_cfg_enable_black");
-    if (ebVal !== null && dom.cfgEnableBlack) dom.cfgEnableBlack.checked = ebVal === "true";
+      const cardVal = localStorage.getItem("rvcg_cfg_card_dur");
+      if (cardVal && dom.cfgCardDur) dom.cfgCardDur.value = cardVal;
 
-    const ewVal = localStorage.getItem("rvcg_cfg_enable_white");
-    if (ewVal !== null && dom.cfgEnableWhite) dom.cfgEnableWhite.checked = ewVal === "true";
+      const ebVal = localStorage.getItem("rvcg_cfg_enable_black");
+      if (ebVal !== null && dom.cfgEnableBlack) dom.cfgEnableBlack.checked = ebVal === "true";
 
-    const evVal = localStorage.getItem("rvcg_cfg_enable_visual");
-    if (evVal !== null && dom.cfgEnableVisual) dom.cfgEnableVisual.checked = evVal === "true";
+      const ewVal = localStorage.getItem("rvcg_cfg_enable_white");
+      if (ewVal !== null && dom.cfgEnableWhite) dom.cfgEnableWhite.checked = ewVal === "true";
 
-    const esVal = localStorage.getItem("rvcg_cfg_enable_sub");
-    if (esVal !== null && dom.cfgEnableSub) dom.cfgEnableSub.checked = esVal === "true";
+      const evVal = localStorage.getItem("rvcg_cfg_enable_visual");
+      if (evVal !== null && dom.cfgEnableVisual) dom.cfgEnableVisual.checked = evVal === "true";
+
+      const esVal = localStorage.getItem("rvcg_cfg_enable_sub");
+      if (esVal !== null && dom.cfgEnableSub) dom.cfgEnableSub.checked = esVal === "true";
+    }
   } catch (_) {}
   syncStageUI();
 }
+
 
 export function initSettingsAndExport() {
   try {
@@ -211,7 +226,19 @@ export function initSettingsAndExport() {
   });
 
   document.getElementById("copy-export-btn")?.addEventListener("click", () => {
-    if (dom.exportTextarea) navigator.clipboard.writeText(dom.exportTextarea.value);
+    if (dom.exportTextarea) {
+      navigator.clipboard.writeText(dom.exportTextarea.value);
+      const btn = document.getElementById("copy-export-btn");
+      if (btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = `<i class="ph ph-check text-sm"></i><span>Copied!</span>`;
+        btn.classList.add("btn-success");
+        setTimeout(() => {
+          btn.innerHTML = orig;
+          btn.classList.remove("btn-success");
+        }, 1800);
+      }
+    }
   });
 
   document.getElementById("close-export")?.addEventListener("click", () => {

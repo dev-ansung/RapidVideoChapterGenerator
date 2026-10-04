@@ -31,11 +31,11 @@ export function renderGallery(onChaptersChanged) {
 
     const card = document.createElement("article");
     const isActive = index === state.currentIndex;
-    card.className = `chapter-card card bg-base-200 border border-base-content/10 shadow-sm transition-all overflow-hidden ${isActive ? "ring-2 ring-primary" : ""}`;
+    card.className = `chapter-card card bg-base-200 border border-base-content/10 shadow-sm transition-all overflow-hidden hover:border-primary/40 hover:shadow-md ${isActive ? "ring-2 ring-primary" : ""}`;
     card.dataset.index = index;
 
     const header = document.createElement("div");
-    header.className = "card-header flex items-center justify-between px-3 py-2 border-b border-base-content/10 bg-base-300/50 cursor-pointer select-none";
+    header.className = "card-header flex items-center justify-between px-3 py-2 border-b border-base-content/10 bg-base-300/40 cursor-pointer select-none";
     header.addEventListener("click", () => openAt(index, item.start_time, highlightActiveCard));
 
     const hLeft = document.createElement("div");
@@ -46,11 +46,11 @@ export function renderGallery(onChaptersChanged) {
     cutDot.dataset.tippyContent = item.cut_detail || "";
 
     const badge = document.createElement("span");
-    badge.className = "badge badge-neutral badge-sm font-mono shrink-0";
+    badge.className = "badge badge-neutral badge-sm font-mono font-bold tracking-tight shrink-0";
     badge.textContent = "#" + item.id;
 
     const titleInput = document.createElement("input");
-    titleInput.className = "input input-ghost input-xs font-semibold flex-1 min-w-0 focus:input-bordered";
+    titleInput.className = "input input-ghost input-xs font-semibold flex-1 min-w-0 hover:bg-base-100/50 focus:bg-base-100 focus:input-bordered text-xs rounded transition-colors";
     titleInput.value = item.title;
     titleInput.addEventListener("click", (e) => e.stopPropagation());
     titleInput.addEventListener("change", async () => {
@@ -78,13 +78,13 @@ export function renderGallery(onChaptersChanged) {
     hRight.className = "card-header-right flex items-center gap-2 shrink-0";
 
     const metaSpan = document.createElement("span");
-    metaSpan.className = "text-xs text-base-content/60 font-mono";
-    metaSpan.textContent = `${item.source_range} · ${item.duration_str}`;
+    metaSpan.className = "text-[11px] text-base-content/60 font-mono tracking-tight shrink-0";
+    metaSpan.innerHTML = `<span class="hidden sm:inline">${item.source_range} · </span><span>${item.duration_str}</span>`;
     hRight.appendChild(metaSpan);
 
     if (state.cuts.length > 1) {
       const delBtn = document.createElement("button");
-      delBtn.className = "btn btn-ghost btn-xs btn-circle text-base-content/50 hover:text-error";
+      delBtn.className = "btn btn-ghost btn-xs btn-circle text-base-content/40 hover:text-error hover:bg-error/10 transition-colors";
       delBtn.type = "button";
       delBtn.textContent = "✕";
       delBtn.addEventListener("click", async (e) => {
@@ -119,16 +119,16 @@ export function renderGallery(onChaptersChanged) {
     header.appendChild(hRight);
 
     const grid = document.createElement("div");
-    grid.className = "contact-grid grid grid-cols-3 grid-rows-3 aspect-video gap-0.5 bg-black/20 p-1";
+    grid.className = "contact-grid grid grid-cols-3 grid-rows-3 aspect-video gap-0.5 bg-black/40 p-1 rounded-b-box overflow-hidden";
 
     const slots = item.cell_times.length >= 9 ? item.cell_times.slice(0, 9) : item.cell_times;
     slots.forEach((baseTime) => {
       const cell = document.createElement("div");
-      cell.className = "grid-cell relative overflow-hidden bg-base-300 cursor-pointer rounded-xs bg-no-repeat";
+      cell.className = "grid-cell relative overflow-hidden bg-base-300 cursor-pointer rounded-xs bg-no-repeat transition-transform hover:scale-[1.02] hover:z-10";
       setCellSpriteFrame(cell, baseTime);
 
       const timeBadge = document.createElement("span");
-      timeBadge.className = "cell-time absolute bottom-1 right-1 px-1 py-0.5 rounded bg-black/75 text-[10px] text-white font-mono pointer-events-none";
+      timeBadge.className = "cell-time absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-md text-[10px] text-white/90 font-mono shadow-sm border border-white/10 pointer-events-none";
       timeBadge.textContent = fmtHms(baseTime);
       cell.appendChild(timeBadge);
 
@@ -196,7 +196,8 @@ export function renderGallery(onChaptersChanged) {
     });
   }
 
-  const mech = state.lastStats ? ` (${formatMechanismSummary(state.lastStats)})` : "";
+  const mechSummary = formatMechanismSummary(state.lastStats);
+  const mech = mechSummary ? ` (${mechSummary})` : "";
   if (dom.countLabel) {
     dom.countLabel.textContent = `${visibleCount} / ${state.cuts.length} chapters${mech}`;
   }
