@@ -49,3 +49,12 @@ def test_cli_parser_options() -> None:
     assert cfg.enable_black_fades is True
     assert cfg.enable_visual_cuts is False
     assert cfg.enable_subdivide is False
+
+
+def test_cli_presets() -> None:
+    parser = build_parser()
+    for preset_name in ["default", "movie", "balanced", "podcast", "presentation", "anime", "action", "fine"]:
+        args = parser.parse_args(["video.mp4", "--preset", preset_name])
+        assert args.preset == preset_name
+        cfg = resolve_config(args)
+        assert cfg.min_seg > 0

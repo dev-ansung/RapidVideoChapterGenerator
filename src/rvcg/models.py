@@ -43,48 +43,145 @@ class BoundaryConfig:
 
     @classmethod
     def from_preset(cls, preset: str) -> "BoundaryConfig":
-        if preset in ("default", "black-fades", "fades"):
-            return cls(
-                enable_black_fades=True,
-                enable_white_fades=True,
-                enable_visual_cuts=False,
-                enable_subdivide=False,
-            )
-        if preset == "all-stages":
-            return cls(
-                enable_black_fades=True,
-                enable_white_fades=True,
-                enable_visual_cuts=True,
-                enable_subdivide=True,
-            )
-        if preset == "podcast":
-            return cls(
-                min_seg=120.0,
-                max_seg=900.0,
-                target_seg=450.0,
-                scene_threshold=0.45,
-                enable_visual_cuts=True,
-                enable_subdivide=True,
-            )
-        if preset == "presentation":
-            return cls(
-                min_seg=60.0,
-                max_seg=600.0,
-                target_seg=300.0,
-                scene_threshold=0.30,
-                enable_visual_cuts=True,
-                enable_subdivide=True,
-            )
-        if preset == "action":
-            return cls(
-                min_seg=90.0,
-                max_seg=420.0,
-                target_seg=240.0,
-                scene_threshold=0.35,
-                enable_visual_cuts=True,
-                enable_subdivide=True,
-            )
+        p = preset.strip().lower()
+        if p in ("movie", "black-fades", "fades"):
+            p = "default"
+        elif p == "all-stages":
+            p = "balanced"
+        if p in PRESETS:
+            return PRESETS[p].config
         return cls()
+
+
+@dataclass(frozen=True)
+class PresetMetadata:
+    id: str
+    name: str
+    description: str
+    config: BoundaryConfig
+
+
+PRESETS: dict[str, PresetMetadata] = {
+    "default": PresetMetadata(
+        id="default",
+        name="movie (Fades only - High Precision)",
+        description="High-precision fade detection only. Ideal for films, cinema, and narrative storytelling where scene transitions are intentional fades.",
+        config=BoundaryConfig(
+            min_seg=180.0,
+            max_seg=720.0,
+            target_seg=360.0,
+            black_min_dur=0.4,
+            black_pic_th=0.95,
+            black_pix_th=0.12,
+            white_pic_th=0.95,
+            white_pix_th=0.10,
+            enable_black_fades=True,
+            enable_white_fades=True,
+            enable_visual_cuts=False,
+            enable_subdivide=False,
+        ),
+    ),
+    "balanced": PresetMetadata(
+        id="balanced",
+        name="balanced (Fades + Visual + Subdivide)",
+        description="Full 3-stage pipeline combining fades, visual cuts, and subdivision. Best all-rounder for YouTube videos, documentaries, and mixed media.",
+        config=BoundaryConfig(
+            min_seg=120.0,
+            max_seg=600.0,
+            target_seg=300.0,
+            scene_threshold=0.38,
+            black_min_dur=0.4,
+            black_pic_th=0.95,
+            black_pix_th=0.12,
+            white_pic_th=0.95,
+            white_pix_th=0.10,
+            enable_black_fades=True,
+            enable_white_fades=True,
+            enable_visual_cuts=True,
+            enable_subdivide=True,
+        ),
+    ),
+    "podcast": PresetMetadata(
+        id="podcast",
+        name="podcast (Interviews & Long Talks)",
+        description="Long conversational chapters. Uses a higher visual threshold to ignore 2-person alternating camera switches while subdividing long monolithic discussions.",
+        config=BoundaryConfig(
+            min_seg=180.0,
+            max_seg=900.0,
+            target_seg=480.0,
+            scene_threshold=0.46,
+            black_min_dur=0.4,
+            enable_black_fades=True,
+            enable_white_fades=True,
+            enable_visual_cuts=True,
+            enable_subdivide=True,
+        ),
+    ),
+    "presentation": PresetMetadata(
+        id="presentation",
+        name="presentation (Slides & Keynotes)",
+        description="Slide and topic transitions. Sensitive visual detection catches slide changes that don't shift the entire screen background.",
+        config=BoundaryConfig(
+            min_seg=60.0,
+            max_seg=600.0,
+            target_seg=300.0,
+            scene_threshold=0.28,
+            black_min_dur=0.35,
+            enable_black_fades=True,
+            enable_white_fades=True,
+            enable_visual_cuts=True,
+            enable_subdivide=True,
+        ),
+    ),
+    "anime": PresetMetadata(
+        id="anime",
+        name="anime (TV Episodes & Series)",
+        description="Optimized for 20-45m anime and TV episodes with distinct OP/ED, eyecatches, mid-episode commercial fades, and post-credits previews.",
+        config=BoundaryConfig(
+            min_seg=60.0,
+            max_seg=480.0,
+            target_seg=240.0,
+            scene_threshold=0.36,
+            black_min_dur=0.30,
+            enable_black_fades=True,
+            enable_white_fades=True,
+            enable_visual_cuts=True,
+            enable_subdivide=True,
+        ),
+    ),
+    "action": PresetMetadata(
+        id="action",
+        name="action (Sports, Gaming & Action)",
+        description="High-motion gameplay, sports, and fast-cut action. Raised threshold prevents false cuts during combat while subdividing into compact chapters.",
+        config=BoundaryConfig(
+            min_seg=90.0,
+            max_seg=420.0,
+            target_seg=210.0,
+            scene_threshold=0.42,
+            black_min_dur=0.40,
+            enable_black_fades=True,
+            enable_white_fades=True,
+            enable_visual_cuts=True,
+            enable_subdivide=True,
+        ),
+    ),
+    "fine": PresetMetadata(
+        id="fine",
+        name="fine (Micro / Granular Chapters)",
+        description="Granular chapter boundaries for music videos, highlight reels, micro-tutorials, and rapid navigation.",
+        config=BoundaryConfig(
+            min_seg=30.0,
+            max_seg=180.0,
+            target_seg=90.0,
+            scene_threshold=0.32,
+            black_min_dur=0.25,
+            enable_black_fades=True,
+            enable_white_fades=True,
+            enable_visual_cuts=True,
+            enable_subdivide=True,
+        ),
+    ),
+}
 
 
 @dataclass(frozen=True)

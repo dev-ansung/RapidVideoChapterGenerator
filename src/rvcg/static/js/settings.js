@@ -211,7 +211,19 @@ export function initSettingsAndExport() {
   });
 
   document.getElementById("copy-export-btn")?.addEventListener("click", () => {
-    if (dom.exportTextarea) navigator.clipboard.writeText(dom.exportTextarea.value);
+    if (dom.exportTextarea) {
+      navigator.clipboard.writeText(dom.exportTextarea.value);
+      const btn = document.getElementById("copy-export-btn");
+      if (btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = `<i class="ph ph-check text-sm"></i><span>Copied!</span>`;
+        btn.classList.add("btn-success");
+        setTimeout(() => {
+          btn.innerHTML = orig;
+          btn.classList.remove("btn-success");
+        }, 1800);
+      }
+    }
   });
 
   document.getElementById("close-export")?.addEventListener("click", () => {

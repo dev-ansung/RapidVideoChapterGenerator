@@ -60,7 +60,7 @@ def test_merge_and_sample_merges_short_tail() -> None:
 def test_solve_boundaries_preset_and_callback() -> None:
     cfg = BoundaryConfig.from_preset("presentation")
     assert cfg.min_seg == 60.0
-    assert cfg.scene_threshold == 0.30
+    assert cfg.scene_threshold == 0.28
 
     events: list[int] = []
     raw = RawScanResult(black_points=[200.0], visual_cuts=[])
@@ -80,7 +80,7 @@ def test_solve_boundaries_stage_toggles() -> None:
         white_points=[500.0],
         visual_cuts=[VisualCut(timestamp=600.0, score=0.92)],
     )
-    black_only_cfg = BoundaryConfig.from_preset("black-fades")
+    black_only_cfg = BoundaryConfig.from_preset("movie")
     assert black_only_cfg.enable_black_fades is True
     assert black_only_cfg.enable_white_fades is True
     assert black_only_cfg.enable_visual_cuts is False
@@ -108,10 +108,10 @@ def test_solve_boundaries_stage_toggles() -> None:
     assert len(default_segs) == 3
     assert [s.cut_kind for s in default_segs] == ["start", "black", "white"]
 
-    # all-stages preset tests full multi-stage pipeline
-    segs, stats = solve_boundaries_with_stats(1800.0, full_raw, BoundaryConfig.from_preset("all-stages"))
-    assert len(segs) == 6
-    assert [s.cut_kind for s in segs] == ["start", "black", "white", "visual", "visual", "subdiv"]
+    # balanced preset tests full multi-stage pipeline
+    segs, stats = solve_boundaries_with_stats(1800.0, full_raw, BoundaryConfig.from_preset("balanced"))
+    assert len(segs) == 7
+    assert [s.cut_kind for s in segs] == ["start", "black", "white", "visual", "visual", "subdiv", "subdiv"]
     assert "Black fade" in segs[1].cut_detail
     assert "White fade" in segs[2].cut_detail
     assert "Visual cut" in segs[3].cut_detail
@@ -122,7 +122,7 @@ def test_solve_boundaries_stage_toggles() -> None:
     assert stats.used_white == 1
     assert stats.raw_visual == 2
     assert stats.used_visual == 2
-    assert stats.sub_cuts == 1
+    assert stats.sub_cuts == 2
     assert any("Black fade" in line for line in stats.logs)
     assert any("White fade" in line for line in stats.logs)
     assert any("Visual cut" in line for line in stats.logs)
@@ -131,3 +131,17 @@ def test_solve_boundaries_stage_toggles() -> None:
     assert len(cands) == 5
     assert [c["kind"] for c in cands] == ["black", "black", "white", "visual", "visual"]
     assert [c["timestamp"] for c in cands] == [300.0, 350.0, 500.0, 700.0, 1150.0]
+
+
+def test_all_presets_valid() -> None:
+    from rvcg.models import PRESETS
+
+    for name, meta in PRESETS.items():
+        assert meta.id == name
+        assert meta.name
+        assert meta.description
+        cfg = BoundaryConfig.from_preset(name)
+        assert cfg.min_seg > 0
+        assert cfg.max_seg >= cfg.min_seg
+        assert cfg.target_seg >= cfg.min_seg
+        assert 0.0 <= cfg.scene_threshold <= 1.0

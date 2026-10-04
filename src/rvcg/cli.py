@@ -143,9 +143,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--preset",
-        choices=["default", "black-fades", "podcast", "presentation", "action"],
+        choices=[
+            "default",
+            "movie",
+            "balanced",
+            "all-stages",
+            "podcast",
+            "presentation",
+            "anime",
+            "action",
+            "fine",
+            "black-fades",
+        ],
         default="default",
-        help="Predefined detection sensitivity profile",
+        help="Predefined detection sensitivity profile (default/movie, balanced, podcast, presentation, anime, action, fine)",
     )
     parser.add_argument(
         "--black-min-dur",

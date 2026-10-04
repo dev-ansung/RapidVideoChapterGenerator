@@ -77,13 +77,13 @@ export async function loadDirectory(dirPath) {
 
   data.dirs.forEach((d) => {
     const btn = document.createElement("button");
-    btn.className = "file-item btn btn-outline btn-sm justify-between w-full h-auto py-2 font-normal";
+    btn.className = "file-item btn btn-outline btn-sm justify-between w-full h-auto py-2 font-normal hover:border-primary/50 transition-colors";
     btn.dataset.tippyContent = d.name;
     const nameSpan = document.createElement("span");
-    nameSpan.className = "truncate mr-2";
-    nameSpan.textContent = `📁 ${d.name}`;
+    nameSpan.className = "flex items-center gap-1.5 truncate mr-2 text-xs";
+    nameSpan.innerHTML = `<i class="ph ph-folder text-warning text-sm shrink-0"></i><span class="truncate">${d.name}</span>`;
     const metaSpan = document.createElement("span");
-    metaSpan.className = "badge badge-ghost badge-xs shrink-0";
+    metaSpan.className = "badge badge-ghost badge-xs shrink-0 text-[10px]";
     metaSpan.textContent = "Folder";
     btn.appendChild(nameSpan);
     btn.appendChild(metaSpan);
@@ -93,13 +93,13 @@ export async function loadDirectory(dirPath) {
 
   data.videos.forEach((v) => {
     const btn = document.createElement("button");
-    btn.className = "file-item btn btn-outline btn-sm justify-between w-full h-auto py-2 font-normal";
+    btn.className = "file-item btn btn-outline btn-sm justify-between w-full h-auto py-2 font-normal hover:border-primary/50 transition-colors";
     btn.dataset.tippyContent = v.name;
     const nameSpan = document.createElement("span");
-    nameSpan.className = "truncate mr-2 font-medium";
-    nameSpan.textContent = `🎬 ${v.name}`;
+    nameSpan.className = "flex items-center gap-1.5 truncate mr-2 text-xs font-medium";
+    nameSpan.innerHTML = `<i class="ph ph-film-strip text-primary text-sm shrink-0"></i><span class="truncate">${v.name}</span>`;
     const metaSpan = document.createElement("span");
-    metaSpan.className = "badge badge-neutral badge-xs shrink-0 font-mono";
+    metaSpan.className = "badge badge-neutral badge-xs shrink-0 font-mono text-[10px]";
     metaSpan.textContent = `${v.size_mb} MB`;
     btn.appendChild(nameSpan);
     btn.appendChild(metaSpan);
@@ -209,8 +209,8 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
           dom.statBlack.textContent = payload.enable_black_fades ? `${usedFades} cuts${breakdown} (${rawFades} raw)` : `off (${rawFades} raw)`;
         }
         if (dom.statVisual) dom.statVisual.textContent = payload.enable_visual_cuts ? `${state.lastStats.used_visual} cuts (${state.lastStats.raw_visual} raw)` : `off (${state.lastStats.raw_visual} raw)`;
-        if (dom.statSub) dom.statSub.textContent = payload.enable_subdivide ? `+${state.lastStats.sub_cuts} cuts (${state.lastStats.snapped_cuts} snapped)` : "off";
-        if (dom.progressSummary) dom.progressSummary.textContent = `${state.cuts.length} chapters (${formatMechanismSummary(state.lastStats)})`;
+        const mechStr = formatMechanismSummary(state.lastStats);
+        if (dom.progressSummary) dom.progressSummary.textContent = `${state.cuts.length} chapters${mechStr ? ` (${mechStr})` : ""}`;
       } else {
         if (dom.progressSummary) dom.progressSummary.textContent = `${state.cuts.length} chapters`;
       }
@@ -233,6 +233,59 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
   };
 }
 
+export function applyPreset(presetId) {
+  const presets = window.__RVCG_BOOT__?.presets || {};
+  let meta = presets[presetId];
+  if (!meta && (presetId === "movie" || presetId === "black-fades" || presetId === "fades")) {
+    meta = presets["default"];
+  } else if (!meta && presetId === "all-stages") {
+    meta = presets["balanced"];
+  }
+  if (!meta) return;
+
+  const cfg = meta.config;
+  if (dom.cfgMin && cfg.min_seg !== undefined) dom.cfgMin.value = cfg.min_seg;
+  if (dom.cfgMax && cfg.max_seg !== undefined) dom.cfgMax.value = cfg.max_seg;
+  if (dom.cfgTarget && cfg.target_seg !== undefined) dom.cfgTarget.value = cfg.target_seg;
+  if (dom.cfgTh && cfg.scene_threshold !== undefined) dom.cfgTh.value = cfg.scene_threshold;
+  if (dom.cfgBlackDur && cfg.black_min_dur !== undefined) dom.cfgBlackDur.value = cfg.black_min_dur;
+  if (dom.cfgBlackPicTh && cfg.black_pic_th !== undefined) dom.cfgBlackPicTh.value = Math.round(cfg.black_pic_th * 100);
+  if (dom.cfgBlackPixTh && cfg.black_pix_th !== undefined) dom.cfgBlackPixTh.value = Math.round(cfg.black_pix_th * 100);
+  if (dom.cfgWhitePicTh && cfg.white_pic_th !== undefined) dom.cfgWhitePicTh.value = Math.round(cfg.white_pic_th * 100);
+  if (dom.cfgWhitePixTh && cfg.white_pix_th !== undefined) dom.cfgWhitePixTh.value = Math.round((1.0 - cfg.white_pix_th) * 100);
+  if (dom.cfgEnableBlack && cfg.enable_black_fades !== undefined) dom.cfgEnableBlack.checked = cfg.enable_black_fades;
+  if (dom.cfgEnableWhite && cfg.enable_white_fades !== undefined) dom.cfgEnableWhite.checked = cfg.enable_white_fades;
+  if (dom.cfgEnableVisual && cfg.enable_visual_cuts !== undefined) dom.cfgEnableVisual.checked = cfg.enable_visual_cuts;
+  if (dom.cfgEnableSub && cfg.enable_subdivide !== undefined) dom.cfgEnableSub.checked = cfg.enable_subdivide;
+
+  const presetBadge = document.getElementById("preset-badge");
+  if (presetBadge) presetBadge.textContent = meta.id;
+
+  const presetDesc = document.getElementById("preset-desc");
+  if (presetDesc) presetDesc.textContent = meta.description;
+
+  const presetSelect = document.getElementById("preset-select");
+  if (presetSelect && presetSelect.value !== meta.id && presetSelect.querySelector(`option[value="${meta.id}"]`)) {
+    presetSelect.value = meta.id;
+  }
+
+  syncStageUI();
+  saveSettingsToLocalStorage();
+}
+
+export function markPresetCustom() {
+  const presetBadge = document.getElementById("preset-badge");
+  if (presetBadge) presetBadge.textContent = "custom";
+  const presetDesc = document.getElementById("preset-desc");
+  if (presetDesc) presetDesc.textContent = "Manual configuration overrides active.";
+  const presetSelect = document.getElementById("preset-select");
+  if (presetSelect) {
+    const customOpt = presetSelect.querySelector('option[value="custom"]');
+    if (customOpt) customOpt.disabled = false;
+    presetSelect.value = "custom";
+  }
+}
+
 export function initPicker(onScanComplete) {
   const defaultCfg = window.__RVCG_BOOT__?.defaultCfg || {};
   if (dom.cfgMin) dom.cfgMin.value = defaultCfg.min_seg ?? 180;
@@ -253,65 +306,36 @@ export function initPicker(onScanComplete) {
   if (dom.cfgCardDur) dom.cfgCardDur.value = defaultCfg.card_dur ?? 8.4;
 
   [
-    dom.cfgEnableBlack,
-    dom.cfgEnableWhite,
-    dom.cfgEnableVisual,
-    dom.cfgEnableSub,
+    dom.cfgMin,
+    dom.cfgMax,
+    dom.cfgTarget,
+    dom.cfgTh,
+    dom.cfgBlackDur,
     dom.cfgBlackPicTh,
     dom.cfgBlackPixTh,
     dom.cfgWhitePicTh,
     dom.cfgWhitePixTh,
+    dom.cfgEnableBlack,
+    dom.cfgEnableWhite,
+    dom.cfgEnableVisual,
+    dom.cfgEnableSub,
+    dom.cfgWorkers,
+    dom.cfgTitleTemplate,
+    dom.cfgCardDur,
   ].forEach((el) => {
-    el?.addEventListener("change", syncStageUI);
+    el?.addEventListener("change", () => {
+      syncStageUI();
+      markPresetCustom();
+      saveSettingsToLocalStorage();
+    });
   });
   syncStageUI();
 
   document.getElementById("preset-select")?.addEventListener("change", (e) => {
     const p = e.target.value;
-    if (dom.cfgEnableBlack) dom.cfgEnableBlack.checked = true;
-    if (dom.cfgBlackDur) dom.cfgBlackDur.value = 0.4;
-    if (p === "default" || p === "black-fades") {
-      if (dom.cfgMin) dom.cfgMin.value = 180;
-      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = false;
-      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = false;
-    } else if (p === "all-stages") {
-      if (dom.cfgMin) dom.cfgMin.value = 180;
-      if (dom.cfgMax) dom.cfgMax.value = 600;
-      if (dom.cfgTarget) dom.cfgTarget.value = 360;
-      if (dom.cfgTh) dom.cfgTh.value = 0.38;
-      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = true;
-      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = true;
-    } else if (p === "podcast") {
-      if (dom.cfgMin) dom.cfgMin.value = 120;
-      if (dom.cfgMax) dom.cfgMax.value = 900;
-      if (dom.cfgTarget) dom.cfgTarget.value = 450;
-      if (dom.cfgTh) dom.cfgTh.value = 0.45;
-      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = true;
-      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = true;
-    } else if (p === "presentation") {
-      if (dom.cfgMin) dom.cfgMin.value = 60;
-      if (dom.cfgMax) dom.cfgMax.value = 600;
-      if (dom.cfgTarget) dom.cfgTarget.value = 300;
-      if (dom.cfgTh) dom.cfgTh.value = 0.30;
-      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = true;
-      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = true;
-    } else if (p === "action") {
-      if (dom.cfgMin) dom.cfgMin.value = 90;
-      if (dom.cfgMax) dom.cfgMax.value = 420;
-      if (dom.cfgTarget) dom.cfgTarget.value = 240;
-      if (dom.cfgTh) dom.cfgTh.value = 0.35;
-      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = true;
-      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = true;
-    } else {
-      if (dom.cfgMin) dom.cfgMin.value = 180;
-      if (dom.cfgMax) dom.cfgMax.value = 600;
-      if (dom.cfgTarget) dom.cfgTarget.value = 360;
-      if (dom.cfgTh) dom.cfgTh.value = 0.38;
-      if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = false;
-      if (dom.cfgEnableSub) dom.cfgEnableSub.checked = false;
+    if (p !== "custom") {
+      applyPreset(p);
     }
-    syncStageUI();
-    saveSettingsToLocalStorage();
   });
 
   dom.resumeBrowserBtn?.addEventListener("click", () => showView("browser"));
