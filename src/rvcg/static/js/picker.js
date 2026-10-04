@@ -1,6 +1,7 @@
 import { state, dom, formatMechanismSummary } from "./state.js";
 import { fetchFs, resolvePath, startScanJob, setStatus } from "./api.js";
 import { renderGallery } from "./gallery.js";
+import { saveSettingsToLocalStorage } from "./settings.js";
 
 export function showView(viewName) {
   if (viewName === "browser") {
@@ -310,6 +311,7 @@ export function initPicker(onScanComplete) {
       if (dom.cfgEnableSub) dom.cfgEnableSub.checked = false;
     }
     syncStageUI();
+    saveSettingsToLocalStorage();
   });
 
   dom.resumeBrowserBtn?.addEventListener("click", () => showView("browser"));

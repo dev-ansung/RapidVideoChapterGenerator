@@ -1,5 +1,6 @@
 import { state, dom } from "./state.js";
 import { exportChaptersText, saveChapters, setStatus } from "./api.js";
+import { syncStageUI } from "./picker.js";
 
 export function syncCutDotPreference() {
   if (!dom.prefShowCutDot) return;
@@ -28,6 +29,8 @@ export function syncSettingsInputsFromConfig() {
 
 export function saveSettingsToLocalStorage() {
   try {
+    const presetEl = document.getElementById("preset-select");
+    if (presetEl) localStorage.setItem("rvcg_preset", presetEl.value);
     if (dom.cfgMin) localStorage.setItem("rvcg_cfg_min", dom.cfgMin.value);
     if (dom.cfgBlackDur) localStorage.setItem("rvcg_cfg_black_dur", dom.cfgBlackDur.value);
     if (dom.cfgBlackPicTh) localStorage.setItem("rvcg_cfg_black_pic_th", dom.cfgBlackPicTh.value);
@@ -49,6 +52,11 @@ export function saveSettingsToLocalStorage() {
 
 export function loadSettingsFromLocalStorage() {
   try {
+    const presetVal = localStorage.getItem("rvcg_preset");
+    if (presetVal && document.getElementById("preset-select")) {
+      document.getElementById("preset-select").value = presetVal;
+    }
+
     const minVal = localStorage.getItem("rvcg_cfg_min");
     if (minVal && dom.cfgMin) dom.cfgMin.value = minVal;
 
@@ -97,6 +105,7 @@ export function loadSettingsFromLocalStorage() {
     const esVal = localStorage.getItem("rvcg_cfg_enable_sub");
     if (esVal !== null && dom.cfgEnableSub) dom.cfgEnableSub.checked = esVal === "true";
   } catch (_) {}
+  syncStageUI();
 }
 
 export function initSettingsAndExport() {
@@ -125,8 +134,16 @@ export function initSettingsAndExport() {
 
   const setWorkers = document.getElementById("set-cfg-workers");
   if (setWorkers && dom.cfgWorkers) {
+    setWorkers.addEventListener("input", () => {
+      dom.cfgWorkers.value = setWorkers.value;
+      saveSettingsToLocalStorage();
+    });
     setWorkers.addEventListener("change", () => {
       dom.cfgWorkers.value = setWorkers.value;
+      saveSettingsToLocalStorage();
+    });
+    dom.cfgWorkers.addEventListener("input", () => {
+      setWorkers.value = dom.cfgWorkers.value;
       saveSettingsToLocalStorage();
     });
     dom.cfgWorkers.addEventListener("change", () => {
@@ -134,6 +151,8 @@ export function initSettingsAndExport() {
       saveSettingsToLocalStorage();
     });
   }
+
+  document.getElementById("preset-select")?.addEventListener("change", saveSettingsToLocalStorage);
 
   [
     dom.cfgMin,
@@ -153,6 +172,7 @@ export function initSettingsAndExport() {
     dom.cfgEnableVisual,
     dom.cfgEnableSub,
   ].forEach((el) => {
+    el?.addEventListener("input", saveSettingsToLocalStorage);
     el?.addEventListener("change", saveSettingsToLocalStorage);
   });
 
