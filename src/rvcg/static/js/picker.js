@@ -257,6 +257,13 @@ export function applyPreset(presetId) {
   if (dom.cfgEnableWhite && cfg.enable_white_fades !== undefined) dom.cfgEnableWhite.checked = cfg.enable_white_fades;
   if (dom.cfgEnableVisual && cfg.enable_visual_cuts !== undefined) dom.cfgEnableVisual.checked = cfg.enable_visual_cuts;
   if (dom.cfgEnableSub && cfg.enable_subdivide !== undefined) dom.cfgEnableSub.checked = cfg.enable_subdivide;
+  if (dom.cfgWorkers && cfg.workers !== undefined) {
+    dom.cfgWorkers.value = cfg.workers;
+    const setWorkers = document.getElementById("set-cfg-workers");
+    if (setWorkers) setWorkers.value = cfg.workers;
+  }
+  if (dom.cfgTitleTemplate && cfg.title_template !== undefined) dom.cfgTitleTemplate.value = cfg.title_template;
+  if (dom.cfgCardDur && cfg.card_dur !== undefined) dom.cfgCardDur.value = cfg.card_dur;
 
   const presetBadge = document.getElementById("preset-badge");
   if (presetBadge) presetBadge.textContent = meta.id;

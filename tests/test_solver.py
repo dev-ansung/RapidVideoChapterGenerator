@@ -145,3 +145,10 @@ def test_all_presets_valid() -> None:
         assert cfg.max_seg >= cfg.min_seg
         assert cfg.target_seg >= cfg.min_seg
         assert 0.0 <= cfg.scene_threshold <= 1.0
+        assert 0.5 <= cfg.black_pic_th <= 1.0
+        assert 0.01 <= cfg.black_pix_th <= 0.5
+        assert 0.5 <= cfg.white_pic_th <= 1.0
+        assert 0.01 <= cfg.white_pix_th <= 0.5
+        assert cfg.workers >= 1
+        assert "{n" in cfg.title_template
+        assert cfg.card_dur > 0
