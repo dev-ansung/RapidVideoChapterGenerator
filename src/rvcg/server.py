@@ -395,13 +395,22 @@ class LifecycleRequestHandler(BaseHTTPRequestHandler):
                 workers=max(1, int(safe_float(payload.get("workers")) or self.server.default_config.workers)),
                 scene_threshold=safe_float(payload.get("threshold")) or self.server.default_config.scene_threshold,
                 black_min_dur=safe_float(payload.get("black_min_dur")) or self.server.default_config.black_min_dur,
+                black_pic_th=safe_float(payload.get("black_pic_th")) or self.server.default_config.black_pic_th,
+                white_pic_th=safe_float(payload.get("white_pic_th")) or self.server.default_config.white_pic_th,
+                black_pix_th=safe_float(payload.get("black_pix_th")) or self.server.default_config.black_pix_th,
+                white_pix_th=safe_float(payload.get("white_pix_th")) or self.server.default_config.white_pix_th,
                 enable_black_fades=bool(
                     payload.get("enable_black_fades", self.server.default_config.enable_black_fades)
+                ),
+                enable_white_fades=bool(
+                    payload.get("enable_white_fades", self.server.default_config.enable_white_fades)
                 ),
                 enable_visual_cuts=bool(
                     payload.get("enable_visual_cuts", self.server.default_config.enable_visual_cuts)
                 ),
                 enable_subdivide=bool(payload.get("enable_subdivide", self.server.default_config.enable_subdivide)),
+                card_dur=safe_float(payload.get("card_dur")) or self.server.default_config.card_dur,
+                title_template=str(payload.get("title_template", self.server.default_config.title_template)),
             )
             job_id = uuid.uuid4().hex[:12]
             job = ScanJob(job_id=job_id, video_path=vid_path)

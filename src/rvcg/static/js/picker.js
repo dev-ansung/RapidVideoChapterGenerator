@@ -15,11 +15,17 @@ export function showView(viewName) {
 
 export function syncStageUI() {
   const bOn = dom.cfgEnableBlack?.checked;
+  const wOn = bOn && dom.cfgEnableWhite?.checked;
   const vOn = dom.cfgEnableVisual?.checked;
   const sOn = dom.cfgEnableSub?.checked;
 
   document.getElementById("stage-black")?.classList.toggle("opacity-50", !bOn);
   if (dom.cfgBlackDur) dom.cfgBlackDur.disabled = !bOn;
+  if (dom.cfgBlackPicTh) dom.cfgBlackPicTh.disabled = !bOn;
+  if (dom.cfgBlackPixTh) dom.cfgBlackPixTh.disabled = !bOn;
+  if (dom.cfgEnableWhite) dom.cfgEnableWhite.disabled = !bOn;
+  if (dom.cfgWhitePicTh) dom.cfgWhitePicTh.disabled = !wOn;
+  if (dom.cfgWhitePixTh) dom.cfgWhitePixTh.disabled = !wOn;
 
   document.getElementById("stage-visual")?.classList.toggle("opacity-50", !vOn);
   if (dom.cfgTh) dom.cfgTh.disabled = !vOn;
@@ -125,6 +131,7 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
   for (let i = 1; i <= 5; i++) setPhaseUI(i, 0, "waiting...");
   setPhaseUI("spr", 0, "rendering...");
 
+  const rawWhtPix = Number(dom.cfgWhitePixTh?.value || 90);
   const payload = {
     path: videoPath,
     refresh: Boolean(forceRefresh),
@@ -133,10 +140,17 @@ export async function startScan(videoPath, forceRefresh, onScanComplete) {
     target_seg: Number(dom.cfgTarget?.value || 360),
     threshold: Number(dom.cfgTh?.value || 0.38),
     black_min_dur: Number(dom.cfgBlackDur?.value || 0.4),
+    black_pic_th: Number(dom.cfgBlackPicTh?.value || 95) / 100.0,
+    black_pix_th: Number(dom.cfgBlackPixTh?.value || 12) / 100.0,
+    white_pic_th: Number(dom.cfgWhitePicTh?.value || 95) / 100.0,
+    white_pix_th: Math.max(0.01, (100.0 - rawWhtPix) / 100.0),
     enable_black_fades: Boolean(dom.cfgEnableBlack?.checked),
+    enable_white_fades: Boolean(dom.cfgEnableBlack?.checked && dom.cfgEnableWhite?.checked),
     enable_visual_cuts: Boolean(dom.cfgEnableVisual?.checked),
     enable_subdivide: Boolean(dom.cfgEnableSub?.checked),
     workers: Number(dom.cfgWorkers?.value || 8),
+    title_template: dom.cfgTitleTemplate?.value || "Scene {n:02d}",
+    card_dur: Number(dom.cfgCardDur?.value || 8.4),
   };
 
   state.lastStats = null;
@@ -225,12 +239,28 @@ export function initPicker(onScanComplete) {
   if (dom.cfgTarget) dom.cfgTarget.value = defaultCfg.target_seg ?? 360;
   if (dom.cfgTh) dom.cfgTh.value = defaultCfg.threshold ?? 0.38;
   if (dom.cfgBlackDur) dom.cfgBlackDur.value = defaultCfg.black_min_dur ?? 0.4;
+  if (dom.cfgBlackPicTh) dom.cfgBlackPicTh.value = Math.round((defaultCfg.black_pic_th ?? 0.95) * 100);
+  if (dom.cfgBlackPixTh) dom.cfgBlackPixTh.value = Math.round((defaultCfg.black_pix_th ?? 0.12) * 100);
+  if (dom.cfgWhitePicTh) dom.cfgWhitePicTh.value = Math.round((defaultCfg.white_pic_th ?? 0.95) * 100);
+  if (dom.cfgWhitePixTh) dom.cfgWhitePixTh.value = Math.round((1.0 - (defaultCfg.white_pix_th ?? 0.10)) * 100);
   if (dom.cfgEnableBlack) dom.cfgEnableBlack.checked = defaultCfg.enable_black_fades ?? true;
+  if (dom.cfgEnableWhite) dom.cfgEnableWhite.checked = defaultCfg.enable_white_fades ?? true;
   if (dom.cfgEnableVisual) dom.cfgEnableVisual.checked = defaultCfg.enable_visual_cuts ?? false;
   if (dom.cfgEnableSub) dom.cfgEnableSub.checked = defaultCfg.enable_subdivide ?? false;
   if (dom.cfgWorkers) dom.cfgWorkers.value = defaultCfg.workers ?? 8;
+  if (dom.cfgTitleTemplate) dom.cfgTitleTemplate.value = defaultCfg.title_template || "Scene {n:02d}";
+  if (dom.cfgCardDur) dom.cfgCardDur.value = defaultCfg.card_dur ?? 8.4;
 
-  [dom.cfgEnableBlack, dom.cfgEnableVisual, dom.cfgEnableSub].forEach((el) => {
+  [
+    dom.cfgEnableBlack,
+    dom.cfgEnableWhite,
+    dom.cfgEnableVisual,
+    dom.cfgEnableSub,
+    dom.cfgBlackPicTh,
+    dom.cfgBlackPixTh,
+    dom.cfgWhitePicTh,
+    dom.cfgWhitePixTh,
+  ].forEach((el) => {
     el?.addEventListener("change", syncStageUI);
   });
   syncStageUI();

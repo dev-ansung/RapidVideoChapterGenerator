@@ -30,11 +30,18 @@ export function saveSettingsToLocalStorage() {
   try {
     if (dom.cfgMin) localStorage.setItem("rvcg_cfg_min", dom.cfgMin.value);
     if (dom.cfgBlackDur) localStorage.setItem("rvcg_cfg_black_dur", dom.cfgBlackDur.value);
+    if (dom.cfgBlackPicTh) localStorage.setItem("rvcg_cfg_black_pic_th", dom.cfgBlackPicTh.value);
+    if (dom.cfgBlackPixTh) localStorage.setItem("rvcg_cfg_black_pix_th", dom.cfgBlackPixTh.value);
+    if (dom.cfgWhitePicTh) localStorage.setItem("rvcg_cfg_white_pic_th", dom.cfgWhitePicTh.value);
+    if (dom.cfgWhitePixTh) localStorage.setItem("rvcg_cfg_white_pix_th", dom.cfgWhitePixTh.value);
     if (dom.cfgTh) localStorage.setItem("rvcg_cfg_th", dom.cfgTh.value);
     if (dom.cfgMax) localStorage.setItem("rvcg_cfg_max", dom.cfgMax.value);
     if (dom.cfgTarget) localStorage.setItem("rvcg_cfg_target", dom.cfgTarget.value);
     if (dom.cfgWorkers) localStorage.setItem("rvcg_cfg_workers", dom.cfgWorkers.value);
+    if (dom.cfgTitleTemplate) localStorage.setItem("rvcg_cfg_title_template", dom.cfgTitleTemplate.value);
+    if (dom.cfgCardDur) localStorage.setItem("rvcg_cfg_card_dur", dom.cfgCardDur.value);
     if (dom.cfgEnableBlack) localStorage.setItem("rvcg_cfg_enable_black", dom.cfgEnableBlack.checked ? "true" : "false");
+    if (dom.cfgEnableWhite) localStorage.setItem("rvcg_cfg_enable_white", dom.cfgEnableWhite.checked ? "true" : "false");
     if (dom.cfgEnableVisual) localStorage.setItem("rvcg_cfg_enable_visual", dom.cfgEnableVisual.checked ? "true" : "false");
     if (dom.cfgEnableSub) localStorage.setItem("rvcg_cfg_enable_sub", dom.cfgEnableSub.checked ? "true" : "false");
   } catch (_) {}
@@ -48,6 +55,18 @@ export function loadSettingsFromLocalStorage() {
     const bdVal = localStorage.getItem("rvcg_cfg_black_dur");
     if (bdVal && dom.cfgBlackDur) dom.cfgBlackDur.value = bdVal;
 
+    const bPicVal = localStorage.getItem("rvcg_cfg_black_pic_th");
+    if (bPicVal && dom.cfgBlackPicTh) dom.cfgBlackPicTh.value = bPicVal;
+
+    const bPixVal = localStorage.getItem("rvcg_cfg_black_pix_th");
+    if (bPixVal && dom.cfgBlackPixTh) dom.cfgBlackPixTh.value = bPixVal;
+
+    const wPicVal = localStorage.getItem("rvcg_cfg_white_pic_th");
+    if (wPicVal && dom.cfgWhitePicTh) dom.cfgWhitePicTh.value = wPicVal;
+
+    const wPixVal = localStorage.getItem("rvcg_cfg_white_pix_th");
+    if (wPixVal && dom.cfgWhitePixTh) dom.cfgWhitePixTh.value = wPixVal;
+
     const thVal = localStorage.getItem("rvcg_cfg_th");
     if (thVal && dom.cfgTh) dom.cfgTh.value = thVal;
 
@@ -60,8 +79,17 @@ export function loadSettingsFromLocalStorage() {
     const workersVal = localStorage.getItem("rvcg_cfg_workers");
     if (workersVal && dom.cfgWorkers) dom.cfgWorkers.value = workersVal;
 
+    const titleVal = localStorage.getItem("rvcg_cfg_title_template");
+    if (titleVal && dom.cfgTitleTemplate) dom.cfgTitleTemplate.value = titleVal;
+
+    const cardVal = localStorage.getItem("rvcg_cfg_card_dur");
+    if (cardVal && dom.cfgCardDur) dom.cfgCardDur.value = cardVal;
+
     const ebVal = localStorage.getItem("rvcg_cfg_enable_black");
     if (ebVal !== null && dom.cfgEnableBlack) dom.cfgEnableBlack.checked = ebVal === "true";
+
+    const ewVal = localStorage.getItem("rvcg_cfg_enable_white");
+    if (ewVal !== null && dom.cfgEnableWhite) dom.cfgEnableWhite.checked = ewVal === "true";
 
     const evVal = localStorage.getItem("rvcg_cfg_enable_visual");
     if (evVal !== null && dom.cfgEnableVisual) dom.cfgEnableVisual.checked = evVal === "true";
@@ -110,11 +138,18 @@ export function initSettingsAndExport() {
   [
     dom.cfgMin,
     dom.cfgBlackDur,
+    dom.cfgBlackPicTh,
+    dom.cfgBlackPixTh,
+    dom.cfgWhitePicTh,
+    dom.cfgWhitePixTh,
     dom.cfgTh,
     dom.cfgMax,
     dom.cfgTarget,
     dom.cfgWorkers,
+    dom.cfgTitleTemplate,
+    dom.cfgCardDur,
     dom.cfgEnableBlack,
+    dom.cfgEnableWhite,
     dom.cfgEnableVisual,
     dom.cfgEnableSub,
   ].forEach((el) => {

@@ -151,7 +151,7 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black and fade-to-white transitions (95% coverage).">
+          <div id="stage-black" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2" data-tippy-content="Stage 1: Place primary chapter cuts at fade-to-black and fade-to-white transitions.">
             <div class="flex items-center justify-between">
               <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
                 <input id="cfg-enable-black" type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked />
@@ -163,6 +163,44 @@
               <legend class="fieldset-legend text-[11px]">Min Fade (s)</legend>
               <input id="cfg-black-dur" class="input input-bordered input-xs w-full" type="number" step="0.05" min="0.05" max="5.0" />
             </fieldset>
+
+            <details class="collapse collapse-arrow bg-base-300/60 border border-base-content/10 rounded-box mt-1">
+              <summary class="collapse-title text-[11px] font-semibold py-1.5 min-h-0 px-2.5">Advanced Fade Parameters</summary>
+              <div class="collapse-content flex flex-col gap-2 pt-1 text-[11px] px-2.5">
+                <div class="flex flex-col gap-1 border-b border-base-content/10 pb-2">
+                  <div class="font-semibold text-base-content/80">Black Fade (Fade-to-Black)</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <fieldset class="fieldset">
+                      <legend class="fieldset-legend text-[10px]">Min Coverage %</legend>
+                      <input id="cfg-black-pic-th" class="input input-bordered input-xs w-full" type="number" step="1" min="50" max="100" />
+                    </fieldset>
+                    <fieldset class="fieldset">
+                      <legend class="fieldset-legend text-[10px]">Max Pixel Luma %</legend>
+                      <input id="cfg-black-pix-th" class="input input-bordered input-xs w-full" type="number" step="1" min="1" max="50" />
+                    </fieldset>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-base-content/80">White Fade (Fade-to-White)</span>
+                    <label class="flex items-center gap-1 cursor-pointer">
+                      <input id="cfg-enable-white" type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked />
+                      <span class="text-[10px]">Enable</span>
+                    </label>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <fieldset class="fieldset">
+                      <legend class="fieldset-legend text-[10px]">Min Coverage %</legend>
+                      <input id="cfg-white-pic-th" class="input input-bordered input-xs w-full" type="number" step="1" min="50" max="100" />
+                    </fieldset>
+                    <fieldset class="fieldset">
+                      <legend class="fieldset-legend text-[10px]">Min Pixel Luma %</legend>
+                      <input id="cfg-white-pix-th" class="input input-bordered input-xs w-full" type="number" step="1" min="50" max="99" />
+                    </fieldset>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
 
           <div id="stage-visual" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2 opacity-50" data-tippy-content="Stage 2: Place secondary chapter cuts at sharp visual scene transitions.">
@@ -177,6 +215,13 @@
               <legend class="fieldset-legend text-[11px]">Visual Cut Threshold</legend>
               <input id="cfg-th" class="input input-bordered input-xs w-full" type="number" step="0.01" min="0.05" max="0.95" disabled />
             </fieldset>
+
+            <details class="collapse collapse-arrow bg-base-300/60 border border-base-content/10 rounded-box mt-1">
+              <summary class="collapse-title text-[11px] font-semibold py-1.5 min-h-0 px-2.5">Visual Cut Info</summary>
+              <div class="collapse-content text-[11px] text-base-content/70 pt-1 px-2.5">
+                Calculates frame-to-frame pixel differences. Scores $\ge 0.35$ detect hard cuts and camera angle switches.
+              </div>
+            </details>
           </div>
 
           <div id="stage-subdivide" class="card bg-base-300/40 border border-base-content/10 p-3 flex flex-col gap-2 opacity-50" data-tippy-content="Stage 3: Automatically subdivide any remaining chapter longer than Max (s) into ~Target (s) segments.">
@@ -197,8 +242,33 @@
                 <input id="cfg-target" class="input input-bordered input-xs w-full" type="number" step="10" disabled />
               </fieldset>
             </div>
+
+            <details class="collapse collapse-arrow bg-base-300/60 border border-base-content/10 rounded-box mt-1">
+              <summary class="collapse-title text-[11px] font-semibold py-1.5 min-h-0 px-2.5">Subdivision Logic</summary>
+              <div class="collapse-content text-[11px] text-base-content/70 pt-1 px-2.5">
+                Splits gaps longer than Max into ~Target duration intervals, snapping cuts to nearest candidate visual cuts.
+              </div>
+            </details>
           </div>
         </div>
+
+        <details class="collapse collapse-arrow bg-base-300/30 border border-base-content/10 rounded-box">
+          <summary class="collapse-title text-xs font-semibold py-2 min-h-0 px-3">⚙ Advanced Pipeline &amp; Output Parameters</summary>
+          <div class="collapse-content grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs px-3">
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend text-[11px]">Parallel FFmpeg Workers</legend>
+              <input id="cfg-workers" class="input input-bordered input-xs w-full" type="number" step="1" min="1" max="16" />
+            </fieldset>
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend text-[11px]">Chapter Title Template</legend>
+              <input id="cfg-title-template" class="input input-bordered input-xs w-full" type="text" placeholder="Scene {n:02d}" />
+            </fieldset>
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend text-[11px]">Preview Card Duration (s)</legend>
+              <input id="cfg-card-dur" class="input input-bordered input-xs w-full" type="number" step="0.5" min="2.0" max="60.0" />
+            </fieldset>
+          </div>
+        </details>
       </div>
     </div>
   </section>
